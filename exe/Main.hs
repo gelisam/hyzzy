@@ -100,17 +100,17 @@ data MetaCommand = MetaCommand
 metaCommands
   :: [MetaCommand]
 metaCommands
-  = [ MetaCommand ":browse" "List the commands available in the current room." $ do
-        commandNames <- availableCommandNames
-        for_ commandNames $ \commandName -> do
-          typeName <- liftI $ typeOf commandName
-          liftIO $ putStrLn $ commandName ++ " :: " ++ typeName
-    , MetaCommand ":help" "List the meta-commands." $ do
+  = [ MetaCommand ":help" "List the meta-commands." $ do
         let column1Width = fromMaybe 0
                          $ maximumOf (each . #metaCommandName . to length) metaCommands
         for_ metaCommands $ \(MetaCommand {..}) -> do
           liftIO $ putStrLn $ take (column1Width + 2) (metaCommandName ++ repeat ' ')
                            ++ metaCommandHelp
+    , MetaCommand ":browse" "List the commands available in the current room." $ do
+        commandNames <- availableCommandNames
+        for_ commandNames $ \commandName -> do
+          typeName <- liftI $ typeOf commandName
+          liftIO $ putStrLn $ commandName ++ " :: " ++ typeName
     , MetaCommand ":quit" "Abandon the quest (Ctrl-D works too)." $ do
         liftIO exitSuccess
     ]
