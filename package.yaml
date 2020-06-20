@@ -24,7 +24,9 @@ executables:
     dependencies:
       - base
       - exceptions
+      - generic-lens
       - haskeline
       - hint
       - hyzzy
+      - lens
       - transformers

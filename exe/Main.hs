@@ -1,15 +1,19 @@
-{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE DeriveGeneric, LambdaCase, OverloadedLabels, RecordWildCards, ViewPatterns #-}
 {-# OPTIONS -Wno-name-shadowing #-}
 module Main where
 
 import Control.Exception (AsyncException(UserInterrupt))
+import Control.Lens
 import Control.Monad
 import Control.Monad.Catch
 import Control.Monad.Trans.Writer
 import Data.Char
 import Data.Foldable
 import Data.Function
+import Data.Generics.Labels ()
 import Data.List
+import Data.Maybe
+import GHC.Generics (Generic)
 import Language.Haskell.Interpreter
 import System.Console.Haskeline
 import System.Exit
@@ -50,22 +54,46 @@ availableCommandNames = execWriterT $ do
     _ -> do
       pure ()
 
+
+data MetaCommand = MetaCommand
+  { metaCommandName   :: String
+  , metaCommandHelp   :: String
+  , metaCommandAction :: InterpreterT IO ()
+  }
+  deriving Generic
+
+metaCommands
+  :: [MetaCommand]
+metaCommands
+  = [ MetaCommand ":browse" "List the commands available in the current room." $ do
+        commandNames <- availableCommandNames
+        for_ commandNames $ \commandName -> do
+          typeName <- typeOf commandName
+          liftIO $ putStrLn $ commandName ++ " :: " ++ typeName
+    , MetaCommand ":help" "List the meta-commands." $ do
+        let column1Width = fromMaybe 0
+                         $ maximumOf (each . #metaCommandName . to length) metaCommands
+        for_ metaCommands $ \(MetaCommand {..}) -> do
+          liftIO $ putStrLn $ take (column1Width + 2) (metaCommandName ++ repeat ' ')
+                           ++ metaCommandHelp
+    , MetaCommand ":quit" "Abandon the quest (Ctrl-D works too)." $ do
+        liftIO exitSuccess
+    ]
+
+lookupMetaCommand
+  :: String
+  -> Maybe MetaCommand
+lookupMetaCommand name
+  = elemIndexOf (each .> selfIndex <. #metaCommandName) name metaCommands
+
+
 processInput
   :: String
   -> InterpreterT IO ()
 processInput "" = do
   pure ()
-processInput ":help" = do
-  liftIO $ putStrLn ":browse   List the commands available in the current room."
-  liftIO $ putStrLn ":help     List the meta-commands."
-  liftIO $ putStrLn ":quit     Abandon the quest (Ctrl-D works too)."
-processInput ":browse" = do
-  commandNames <- availableCommandNames
-  for_ commandNames $ \commandName -> do
-    typeName <- typeOf commandName
-    liftIO $ putStrLn $ commandName ++ " :: " ++ typeName
-processInput ":quit" = do
-  liftIO exitSuccess
+processInput (lookupMetaCommand -> Just metaCommand) = do
+  metaCommandAction metaCommand
 processInput input = do
   r <- try $ interpret input (as :: Command)
   case r of
