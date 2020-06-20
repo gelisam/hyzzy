@@ -26,23 +26,30 @@ haskelineSettings
 haskelineSettings
   = setComplete completionFunc defaultSettings
 
+isWordChar
+  :: Char -> Bool
+isWordChar c = isAlphaNum c || c == ':'
+
 completionFunc
   :: (String, String)
   -> InterpreterT IO (String, [Completion])
 completionFunc (reversedLhs, _) = do
-  let reversedWordPrefix = takeWhile isAlphaNum reversedLhs
+  let reversedWordPrefix = takeWhile isWordChar reversedLhs
   let wordPrefix = reverse reversedWordPrefix
-  commandNames <- availableCommandNames
+  names <- execWriterT $ do
+    tell $ toListOf (each . #metaCommandName) metaCommands
+    tell =<< lift availableCommandNames
   completions <- execWriterT $ do
-    for_ commandNames $ \commandName -> do
-      when (wordPrefix `isPrefixOf` commandName) $ do
+    for_ names $ \name -> do
+      when (wordPrefix `isPrefixOf` name) $ do
         let completion = Completion
-              { replacement = drop (length wordPrefix) commandName
-              , display     = commandName
+              { replacement = drop (length wordPrefix) name
+              , display     = name
               , isFinished  = True
               }
         tell [completion]
   pure (reversedLhs, completions)
+
 
 availableCommandNames
   :: InterpreterT IO [String]
