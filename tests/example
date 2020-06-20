@@ -1,4 +1,13 @@
+> :help
+:help    List the meta-commands.
+:browse  List the commands available in the current room.
+:quit    Abandon the quest (Ctrl-D works too).
+> :browse
+look :: Command
+open :: Door -> Command
+unlock :: Key -> Door -> Command
 > look
 You stand in front of the castle's heavy heavy door.
 > open
 open :: Door -> Command
+> :quit
