@@ -40,7 +40,10 @@ type Inventory = Map String Dynamic
 initialInventory
   :: Inventory
 initialInventory
-  = Map.fromList [("key", toDyn Key)]
+  = Map.fromList
+    [ ("door", toDyn Door)  -- TODO: put the door in the environment, not in the inventory!
+    , ("key", toDyn Key)
+    ]
 
 
 data World = World
@@ -103,6 +106,7 @@ completionFunc (reversedLhs, _) = do
   names <- execWriterT $ do
     tell $ toListOf (each . #metaCommandName) metaCommands
     tell =<< lift availableCommandNames
+    (tell =<<) $ lift $ liftW $ use (#playerInventory . to Map.keys)
   completions <- execWriterT $ do
     for_ names $ \name -> do
       when (wordPrefix `isPrefixOf` name) $ do

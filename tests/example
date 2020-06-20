@@ -8,6 +8,7 @@ look :: Command
 open :: Door -> Command
 unlock :: Key -> Door -> Command
 > :inventory
+door :: Door
 key :: Key
 > look
 You stand in front of the castle's heavy heavy door.
