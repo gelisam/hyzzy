@@ -23,10 +23,12 @@ executables:
     main: Main
     dependencies:
       - base
+      - containers
       - exceptions
       - generic-lens
       - haskeline
       - hint
       - hyzzy
       - lens
+      - mmorph
       - transformers

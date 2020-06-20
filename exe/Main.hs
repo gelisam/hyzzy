@@ -6,6 +6,8 @@ import Control.Exception (AsyncException(UserInterrupt))
 import Control.Lens
 import Control.Monad
 import Control.Monad.Catch
+import Control.Monad.Morph (hoist)
+import Control.Monad.Trans.State
 import Control.Monad.Trans.Writer
 import Data.Char
 import Data.Foldable
@@ -21,8 +23,34 @@ import System.Exit
 import Command
 
 
+type TypeName = String
+
+
+data World = World
+
+initialWorld
+  :: World
+initialWorld
+  = World
+
+
+type M = StateT World (InterpreterT IO)
+
+liftW
+  :: State World a
+  -> M a
+liftW
+  = hoist (pure . runIdentity)
+
+liftI
+  :: Interpreter a
+  -> M a
+liftI
+  = lift
+
+
 haskelineSettings
-  :: Settings (InterpreterT IO)
+  :: Settings M
 haskelineSettings
   = setComplete completionFunc defaultSettings
 
@@ -32,7 +60,7 @@ isWordChar c = isAlphaNum c || c == ':'
 
 completionFunc
   :: (String, String)
-  -> InterpreterT IO (String, [Completion])
+  -> M (String, [Completion])
 completionFunc (reversedLhs, _) = do
   let reversedWordPrefix = takeWhile isWordChar reversedLhs
   let wordPrefix = reverse reversedWordPrefix
@@ -52,9 +80,9 @@ completionFunc (reversedLhs, _) = do
 
 
 availableCommandNames
-  :: InterpreterT IO [String]
+  :: M [String]
 availableCommandNames = execWriterT $ do
-  moduleElems <- lift $ getModuleExports "Commands"
+  moduleElems <- lift . liftI $ getModuleExports "Commands"
   for_ moduleElems $ \case
     Fun functionName -> do
       tell [functionName]
@@ -65,7 +93,7 @@ availableCommandNames = execWriterT $ do
 data MetaCommand = MetaCommand
   { metaCommandName   :: String
   , metaCommandHelp   :: String
-  , metaCommandAction :: InterpreterT IO ()
+  , metaCommandAction :: M ()
   }
   deriving Generic
 
@@ -75,7 +103,7 @@ metaCommands
   = [ MetaCommand ":browse" "List the commands available in the current room." $ do
         commandNames <- availableCommandNames
         for_ commandNames $ \commandName -> do
-          typeName <- typeOf commandName
+          typeName <- liftI $ typeOf commandName
           liftIO $ putStrLn $ commandName ++ " :: " ++ typeName
     , MetaCommand ":help" "List the meta-commands." $ do
         let column1Width = fromMaybe 0
@@ -96,19 +124,19 @@ lookupMetaCommand name
 
 processInput
   :: String
-  -> InterpreterT IO ()
+  -> M ()
 processInput "" = do
   pure ()
 processInput (lookupMetaCommand -> Just metaCommand) = do
   metaCommandAction metaCommand
 processInput input = do
-  r <- try $ interpret input (as :: Command)
+  r <- liftI $ try $ interpret input (as :: Command)
   case r of
     Left (UnknownError e) -> do
       liftIO $ putStrLn e
     Left (WontCompile es) -> do
       -- does it at least type-check?
-      r <- try $ typeOf input
+      r <- liftI $ try $ typeOf input
       case (r :: Either InterpreterError String) of
         Left _ -> do
           -- show interpret's error, not typeOf's
@@ -129,10 +157,12 @@ main
 main = do
   putStrLn "A toy text adventure where commands have Haskell types."
   putStrLn "Type \":help\" to view the meta-commands."
-  r <- runInterpreter $ do
-    setImportsQ [ ("Prelude", Nothing)
-                , ("Commands", Nothing)
-                ]
+  r <- runInterpreter
+     $ flip evalStateT initialWorld
+     $ do
+    liftI $ setImportsQ [ ("Prelude", Nothing)
+                        , ("Commands", Nothing)
+                        ]
     runInputT haskelineSettings $ fix $ \loop -> do
       r <- try $ getInputLine "> "
       case r of
