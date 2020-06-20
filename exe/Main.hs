@@ -146,7 +146,7 @@ metaCommands
         for_ metaCommands $ \(MetaCommand {..}) -> do
           liftIO $ putStrLn $ take (column1Width + 2) (metaCommandName ++ repeat ' ')
                            ++ metaCommandHelp
-    , MetaCommand ":browse" "List the commands available in the current room." $ do
+    , MetaCommand ":browse" "List all the commands you can perform." $ do
         commandNames <- availableCommandNames
         for_ commandNames $ \commandName -> do
           typeName <- liftI $ typeOf commandName

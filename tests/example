@@ -1,6 +1,6 @@
 > :help
 :help       List the meta-commands.
-:browse     List the commands available in the current room.
+:browse     List all the commands you can perform.
 :inventory  List the objects you have picked up so far.
 :quit       Abandon the quest (Ctrl-D works too).
 > :browse
