@@ -50,6 +50,8 @@ availableCommandNames = execWriterT $ do
 processInput
   :: String
   -> InterpreterT IO ()
+processInput "" = do
+  pure ()
 processInput ":help" = do
   liftIO $ putStrLn ":browse   List the commands available in the current room."
   liftIO $ putStrLn ":help     List the meta-commands."
