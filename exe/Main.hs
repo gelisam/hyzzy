@@ -6,6 +6,8 @@ import Language.Haskell.Interpreter
 import System.Console.Haskeline
 import System.Exit
 
+import Command
+
 
 haskelineSettings
   :: Settings (InterpreterT IO)
@@ -23,7 +25,7 @@ main
 main = do
     r <- runInterpreter $ do
       setImportsQ [ ("Prelude", Nothing)
-                  , ("Rooms.Garden", Nothing)
+                  , ("Commands", Nothing)
                   ]
       runInputT haskelineSettings loop
     case r of
@@ -39,7 +41,7 @@ main = do
       case minput of
         Nothing -> return ()
         Just input -> do
-          r <- try $ lift $ interpret input (as :: IO ())
+          r <- try $ lift $ interpret input (as :: Command)
           case r of
             Left (UnknownError e) -> do
               liftIO $ putStrLn e
@@ -50,6 +52,6 @@ main = do
               liftIO $ putStrLn e
             Left (GhcException e) -> do
               liftIO $ putStrLn e
-            Right action -> do
-              liftIO action
+            Right command -> do
+              liftIO $ runCommand command
           loop
