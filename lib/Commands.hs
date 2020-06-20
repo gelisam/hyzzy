@@ -1,9 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Commands
-  ( Command
-  , Door, Key
-  , module Commands
-  ) where
+module Commands where
 
 import Command
 import Objects

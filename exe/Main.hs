@@ -22,7 +22,7 @@ import Data.Maybe
 import GHC.Generics (Generic)
 import Language.Haskell.Interpreter
   ( GhcError(errMsg), InterpreterError(..), ModuleElem(Fun), Interpreter, InterpreterT, as
-  , getModuleExports, interpret, runInterpreter, setImportsQ, typeOf
+  , getModuleExports, interpret, runInterpreter, setImports, typeOf
   )
 import System.Console.Haskeline
 import System.Exit
@@ -203,9 +203,7 @@ main = do
   putStrLn "A toy text adventure where commands have Haskell types."
   putStrLn "Type \":help\" to view the meta-commands."
   r <- runM $ do
-    liftI $ setImportsQ [ ("Prelude", Nothing)
-                        , ("Commands", Nothing)
-                        ]
+    liftI $ setImports ["Public"]
     runInputT haskelineSettings $ fix $ \loop -> do
       r <- try $ getInputLine "> "
       case r of
