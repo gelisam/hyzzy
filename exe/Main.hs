@@ -6,32 +6,54 @@ import Control.Exception (AsyncException(UserInterrupt))
 import Control.Lens
 import Control.Monad
 import Control.Monad.Catch
+import Control.Monad.IO.Class
 import Control.Monad.Morph (hoist)
+import Control.Monad.Trans.Class
 import Control.Monad.Trans.State
 import Control.Monad.Trans.Writer
 import Data.Char
+import Data.Dynamic
 import Data.Foldable
 import Data.Function
 import Data.Generics.Labels ()
 import Data.List
+import Data.Map (Map)
 import Data.Maybe
 import GHC.Generics (Generic)
 import Language.Haskell.Interpreter
+  ( GhcError(errMsg), InterpreterError(..), ModuleElem(Fun), Interpreter, InterpreterT, as
+  , getModuleExports, interpret, runInterpreter, setImportsQ, typeOf
+  )
 import System.Console.Haskeline
 import System.Exit
+import qualified Data.Map as Map
 
 import Command
+import Objects
 
 
 type TypeName = String
 
 
+type Inventory = Map String Dynamic
+
+initialInventory
+  :: Inventory
+initialInventory
+  = Map.fromList [("key", toDyn Key)]
+
+
 data World = World
+  { playerInventory :: Inventory
+  }
+  deriving Generic
 
 initialWorld
   :: World
 initialWorld
   = World
+    { playerInventory = initialInventory
+    }
 
 
 newtype M a = M
@@ -125,6 +147,11 @@ metaCommands
         for_ commandNames $ \commandName -> do
           typeName <- liftI $ typeOf commandName
           liftIO $ putStrLn $ commandName ++ " :: " ++ typeName
+    , MetaCommand ":inventory" "List the objects you have picked up so far." $ do
+        inventory <- liftW $ use #playerInventory
+        for_ (Map.toList inventory) $ \(objectName, object) -> do
+          let typeName = show . dynTypeRep $ object
+          liftIO $ putStrLn $ objectName ++ " :: " ++ typeName
     , MetaCommand ":quit" "Abandon the quest (Ctrl-D works too)." $ do
         liftIO exitSuccess
     ]
