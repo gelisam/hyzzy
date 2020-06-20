@@ -1,6 +1,7 @@
 module Main where
 
 import Control.Monad.Catch
+import Data.Foldable
 import Language.Haskell.Interpreter
 import System.Console.Haskeline
 import System.Exit
@@ -40,8 +41,15 @@ main = do
         Just input -> do
           r <- try $ lift $ interpret input (as :: IO ())
           case r of
-            Left e -> do
-              liftIO $ print (e :: InterpreterError)
+            Left (UnknownError e) -> do
+              liftIO $ putStrLn e
+            Left (WontCompile es) -> do
+              for_ es $ \e -> do
+                liftIO $ putStrLn $ errMsg e
+            Left (NotAllowed e) -> do
+              liftIO $ putStrLn e
+            Left (GhcException e) -> do
+              liftIO $ putStrLn e
             Right action -> do
               liftIO action
           loop
