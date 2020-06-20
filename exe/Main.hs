@@ -26,6 +26,17 @@ completionFunc (lhs, _) = do
 processInput
   :: String
   -> InterpreterT IO ()
+processInput ":help" = do
+  liftIO $ putStrLn ":browse   List the commands available in the current room."
+  liftIO $ putStrLn ":help     List the meta-commands."
+processInput ":browse" = do
+  moduleElems <- getModuleExports "Commands"
+  for_ moduleElems $ \case
+    Fun functionName -> do
+      typeName <- typeOf functionName
+      liftIO $ putStrLn $ functionName ++ " :: " ++ typeName
+    _ -> do
+      pure ()
 processInput input = do
   r <- try $ interpret input (as :: Command)
   case r of
@@ -39,9 +50,9 @@ processInput input = do
           -- show interpret's error, not typeOf's
           for_ es $ \e -> do
             liftIO $ putStrLn $ errMsg e
-        Right type_ -> do
+        Right typeName -> do
           -- e.g. "open :: Door -> Command"
-          liftIO $ putStrLn $ input ++ " :: " ++ type_
+          liftIO $ putStrLn $ input ++ " :: " ++ typeName
     Left (NotAllowed e) -> do
       liftIO $ putStrLn e
     Left (GhcException e) -> do
@@ -52,6 +63,8 @@ processInput input = do
 main
   :: IO ()
 main = do
+  putStrLn "A toy text adventure where commands have Haskell types."
+  putStrLn "Type \":help\" to view the meta-commands."
   r <- runInterpreter $ do
     setImportsQ [ ("Prelude", Nothing)
                 , ("Commands", Nothing)
