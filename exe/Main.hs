@@ -1,3 +1,4 @@
+{-# OPTIONS -Wno-name-shadowing #-}
 module Main where
 
 import Control.Monad.Catch
@@ -46,8 +47,16 @@ main = do
             Left (UnknownError e) -> do
               liftIO $ putStrLn e
             Left (WontCompile es) -> do
-              for_ es $ \e -> do
-                liftIO $ putStrLn $ errMsg e
+              -- does it at least type-check?
+              r <- try $ lift $ typeOf input
+              case (r :: Either InterpreterError String) of
+                Left _ -> do
+                  -- show interpret's error, not typeOf's
+                  for_ es $ \e -> do
+                    liftIO $ putStrLn $ errMsg e
+                Right type_ -> do
+                  -- e.g. "open :: Door -> Command"
+                  liftIO $ putStrLn $ input ++ " :: " ++ type_
             Left (NotAllowed e) -> do
               liftIO $ putStrLn e
             Left (GhcException e) -> do
