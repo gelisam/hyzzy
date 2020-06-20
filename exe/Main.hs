@@ -1,4 +1,4 @@
-{-# LANGUAGE DeriveGeneric, LambdaCase, OverloadedLabels, RecordWildCards, ViewPatterns #-}
+{-# LANGUAGE DeriveGeneric, GeneralizedNewtypeDeriving, LambdaCase, OverloadedLabels, RecordWildCards, ViewPatterns #-}
 {-# OPTIONS -Wno-name-shadowing #-}
 module Main where
 
@@ -34,19 +34,33 @@ initialWorld
   = World
 
 
-type M = StateT World (InterpreterT IO)
+newtype M a = M
+  { unM :: StateT World (InterpreterT IO) a
+  }
+  deriving ( Functor, Applicative, Monad
+           , MonadIO
+           , MonadThrow, MonadCatch, MonadMask
+           )
 
 liftW
   :: State World a
   -> M a
 liftW
-  = hoist (pure . runIdentity)
+  = M . hoist (pure . runIdentity)
 
 liftI
   :: Interpreter a
   -> M a
 liftI
-  = lift
+  = M . lift
+
+runM
+  :: M a
+  -> IO (Either InterpreterError a)
+runM
+  = runInterpreter
+  . flip evalStateT initialWorld
+  . unM
 
 
 haskelineSettings
@@ -157,9 +171,7 @@ main
 main = do
   putStrLn "A toy text adventure where commands have Haskell types."
   putStrLn "Type \":help\" to view the meta-commands."
-  r <- runInterpreter
-     $ flip evalStateT initialWorld
-     $ do
+  r <- runM $ do
     liftI $ setImportsQ [ ("Prelude", Nothing)
                         , ("Commands", Nothing)
                         ]
