@@ -2,6 +2,7 @@
 {-# OPTIONS -Wno-name-shadowing #-}
 module Main where
 
+import Control.Exception (AsyncException(UserInterrupt))
 import Control.Monad
 import Control.Monad.Catch
 import Control.Monad.Trans.Writer
@@ -95,9 +96,17 @@ main = do
                 , ("Commands", Nothing)
                 ]
     runInputT haskelineSettings $ fix $ \loop -> do
-      getInputLine "> " >>= \case
-        Nothing -> pure ()
-        Just input -> do
+      r <- try $ getInputLine "> "
+      case r of
+        Left UserInterrupt -> do
+          -- clear the line on Ctrl-C
+          loop
+        Left e -> do
+          throwM e
+        Right Nothing -> do
+          -- eof
+          pure ()
+        Right (Just input) -> do
           lift $ processInput
                $ dropWhile (== ' ')
                $ dropWhileEnd (== ' ')
