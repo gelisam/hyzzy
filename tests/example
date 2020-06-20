@@ -1,0 +1,4 @@
+> look
+You stand in front of the castle's heavy heavy door.
+> open
+open :: Door -> Command
