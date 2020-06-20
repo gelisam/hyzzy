@@ -2,10 +2,12 @@
 {-# OPTIONS -Wno-name-shadowing #-}
 module Main where
 
+import Control.Monad
 import Control.Monad.Catch
 import Control.Monad.Trans.Writer
 import Data.Foldable
 import Data.Function
+import Data.List
 import Language.Haskell.Interpreter
 import System.Console.Haskeline
 import System.Exit
@@ -21,8 +23,19 @@ haskelineSettings
 completionFunc
   :: (String, String)
   -> InterpreterT IO (String, [Completion])
-completionFunc (lhs, _) = do
-  pure (lhs, [])
+completionFunc (reversedLhs, _) = do
+  let lhs = reverse reversedLhs
+  commandNames <- availableCommandNames
+  completions <- execWriterT $ do
+    for_ commandNames $ \commandName -> do
+      when (lhs `isPrefixOf` commandName) $ do
+        let completion = Completion
+              { replacement = drop (length lhs) commandName
+              , display     = commandName
+              , isFinished  = True
+              }
+        tell [completion]
+  pure (reversedLhs, completions)
 
 availableCommandNames
   :: InterpreterT IO [String]
