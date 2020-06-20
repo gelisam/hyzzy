@@ -21,9 +21,6 @@ import Data.Map (Map)
 import Data.Maybe
 import GHC.Generics (Generic)
 import Language.Haskell.Interpreter
-  ( GhcError(errMsg), InterpreterError(..), ModuleElem(Fun), Interpreter, InterpreterT, as
-  , getModuleExports, interpret, runInterpreter, setImports, typeOf
-  )
 import System.Console.Haskeline
 import System.Exit
 import qualified Data.Map as Map
