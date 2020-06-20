@@ -5,6 +5,7 @@ module Main where
 import Control.Monad
 import Control.Monad.Catch
 import Control.Monad.Trans.Writer
+import Data.Char
 import Data.Foldable
 import Data.Function
 import Data.List
@@ -24,13 +25,14 @@ completionFunc
   :: (String, String)
   -> InterpreterT IO (String, [Completion])
 completionFunc (reversedLhs, _) = do
-  let lhs = reverse reversedLhs
+  let reversedWordPrefix = takeWhile isAlphaNum reversedLhs
+  let wordPrefix = reverse reversedWordPrefix
   commandNames <- availableCommandNames
   completions <- execWriterT $ do
     for_ commandNames $ \commandName -> do
-      when (lhs `isPrefixOf` commandName) $ do
+      when (wordPrefix `isPrefixOf` commandName) $ do
         let completion = Completion
-              { replacement = drop (length lhs) commandName
+              { replacement = drop (length wordPrefix) commandName
               , display     = commandName
               , isFinished  = True
               }
@@ -96,7 +98,10 @@ main = do
       getInputLine "> " >>= \case
         Nothing -> pure ()
         Just input -> do
-          lift $ processInput input
+          lift $ processInput
+               $ dropWhile (== ' ')
+               $ dropWhileEnd (== ' ')
+               $ input
           loop
   case r of
     Left e -> do
