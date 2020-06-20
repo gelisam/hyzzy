@@ -58,11 +58,14 @@ processInput "" = do
 processInput ":help" = do
   liftIO $ putStrLn ":browse   List the commands available in the current room."
   liftIO $ putStrLn ":help     List the meta-commands."
+  liftIO $ putStrLn ":quit     Abandon the quest (Ctrl-D works too)."
 processInput ":browse" = do
   commandNames <- availableCommandNames
   for_ commandNames $ \commandName -> do
     typeName <- typeOf commandName
     liftIO $ putStrLn $ commandName ++ " :: " ++ typeName
+processInput ":quit" = do
+  liftIO exitSuccess
 processInput input = do
   r <- try $ interpret input (as :: Command)
   case r of
