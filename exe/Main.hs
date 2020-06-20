@@ -3,6 +3,7 @@
 module Main where
 
 import Control.Monad.Catch
+import Control.Monad.Trans.Writer
 import Data.Foldable
 import Data.Function
 import Language.Haskell.Interpreter
@@ -23,6 +24,16 @@ completionFunc
 completionFunc (lhs, _) = do
   pure (lhs, [])
 
+availableCommandNames
+  :: InterpreterT IO [String]
+availableCommandNames = execWriterT $ do
+  moduleElems <- lift $ getModuleExports "Commands"
+  for_ moduleElems $ \case
+    Fun functionName -> do
+      tell [functionName]
+    _ -> do
+      pure ()
+
 processInput
   :: String
   -> InterpreterT IO ()
@@ -30,13 +41,10 @@ processInput ":help" = do
   liftIO $ putStrLn ":browse   List the commands available in the current room."
   liftIO $ putStrLn ":help     List the meta-commands."
 processInput ":browse" = do
-  moduleElems <- getModuleExports "Commands"
-  for_ moduleElems $ \case
-    Fun functionName -> do
-      typeName <- typeOf functionName
-      liftIO $ putStrLn $ functionName ++ " :: " ++ typeName
-    _ -> do
-      pure ()
+  commandNames <- availableCommandNames
+  for_ commandNames $ \commandName -> do
+    typeName <- typeOf commandName
+    liftIO $ putStrLn $ commandName ++ " :: " ++ typeName
 processInput input = do
   r <- try $ interpret input (as :: Command)
   case r of

@@ -27,3 +27,4 @@ executables:
       - haskeline
       - hint
       - hyzzy
+      - transformers
