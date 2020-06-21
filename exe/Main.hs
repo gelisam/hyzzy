@@ -1,4 +1,4 @@
-{-# LANGUAGE DeriveGeneric, GeneralizedNewtypeDeriving, LambdaCase, OverloadedLabels, RecordWildCards, ViewPatterns #-}
+{-# LANGUAGE DeriveGeneric, GeneralizedNewtypeDeriving, LambdaCase, OverloadedLabels, RankNTypes, RecordWildCards, ViewPatterns #-}
 {-# OPTIONS -Wno-name-shadowing #-}
 module Main where
 
@@ -20,19 +20,51 @@ import Data.List
 import Data.Map (Map)
 import Data.Maybe
 import GHC.Generics (Generic)
-import Language.Haskell.Interpreter
+import Language.Haskell.Interpreter hiding (eval)
 import System.Console.Haskeline
 import System.Exit
+import Text.Printf
+import Type.Reflection (withTypeable)
 import qualified Data.Map as Map
 
 import Command
 import Objects
 
 
+type TermName = String
 type TypeName = String
 
 
-type Inventory = Map String Dynamic
+type Code = String
+
+newtype Ctx = Ctx
+  { eval :: forall r. Typeable r
+         => Code -> M r
+  }
+
+emptyCtx
+  :: Ctx
+emptyCtx = Ctx $ \code -> do
+  liftI $ interpret code infer
+
+extendCtx
+  :: Typeable a
+  => TermName
+  -> a
+  -> Ctx -> Ctx
+extendCtx termName a ctx = Ctx $ \code -> do
+  a2r <- eval ctx $ printf "\\%s -> %s" termName code
+  pure $ a2r a
+
+extendCtxWithDynamic
+  :: TermName
+  -> Dynamic
+  -> Ctx -> Ctx
+extendCtxWithDynamic termName (Dynamic typeRep a)
+  = withTypeable typeRep $ extendCtx termName a
+
+
+type Inventory = Map TermName Dynamic
 
 initialInventory
   :: Inventory
@@ -41,6 +73,13 @@ initialInventory
     [ ("door", toDyn Door)  -- TODO: put the door in the environment, not in the inventory!
     , ("key", toDyn Key)
     ]
+
+extendCtxWithInventory
+  :: Inventory -> Ctx -> Ctx
+extendCtxWithInventory inventory ctx
+  = foldr (uncurry extendCtxWithDynamic) ctx
+  . Map.toList
+  $ inventory
 
 
 data World = World
@@ -54,6 +93,12 @@ initialWorld
   = World
     { playerInventory = initialInventory
     }
+
+currentCtx
+  :: M Ctx
+currentCtx = do
+  inventory <- liftW $ use #playerInventory
+  pure $ extendCtxWithInventory inventory emptyCtx
 
 
 newtype M a = M
@@ -117,7 +162,7 @@ completionFunc (reversedLhs, _) = do
 
 
 availableCommandNames
-  :: M [String]
+  :: M [TermName]
 availableCommandNames = execWriterT $ do
   moduleElems <- lift . liftI $ getModuleExports "Commands"
   for_ moduleElems $ \case
@@ -172,7 +217,8 @@ processInput "" = do
 processInput (lookupMetaCommand -> Just metaCommand) = do
   metaCommandAction metaCommand
 processInput input = do
-  r <- liftI $ try $ interpret input (as :: Command)
+  ctx <- currentCtx
+  r <- try $ eval ctx input
   case r of
     Left (UnknownError e) -> do
       liftIO $ putStrLn e
