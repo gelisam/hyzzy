@@ -179,6 +179,10 @@ runCommandF = \case
     liftW $ modifying #playerInventory
           $ Map.insert name
           $ toDyn object
+  GetFields (Object {..}) -> do
+    liftIO $ readIORef objectFields
+  SetField (Object {..}) field value -> do
+    liftIO $ modifyIORef objectFields (field .~ value)
 
 
 data MetaCommand = MetaCommand

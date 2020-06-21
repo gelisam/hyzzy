@@ -14,6 +14,7 @@ intro = do
   -- TODO: put the door in the environment, not in the inventory!
   addToInventory "door" Door $ DoorFields
     { doorLocked = True
+    , doorOpened = False
     }
 
   addToInventory "key" Key ()

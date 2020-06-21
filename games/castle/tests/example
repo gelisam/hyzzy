@@ -16,6 +16,12 @@ key :: Key
 You stand in front of the castle's heavy heavy door.
 > open
 open :: Door -> Command
+> open door
+It's locked.
+> unlock
+unlock :: Key -> Door -> Command
 > unlock key door
+That random key you happened to carry in your pockets happens to fit the lock. What are the odds?
+> open door
 The door opens with a drawn-out yawn. You're in!
 > :quit

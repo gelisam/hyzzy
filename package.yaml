@@ -16,7 +16,9 @@ dependencies:
   - base
   - containers
   - free
+  - generic-lens
   - kan-extensions
+  - lens
 
 library:
   source-dirs: lib
@@ -28,10 +30,8 @@ executables:
     dependencies:
       - exceptions
       - filepath
-      - generic-lens
       - haskeline
       - hint
       - hyzzy
-      - lens
       - mmorph
       - transformers

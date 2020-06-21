@@ -9,8 +9,9 @@ ghc-options: -W -Wall
 
 dependencies:
   - base
-  - containers
+  - generic-lens
   - hyzzy
+  - lens
 
 library:
   source-dirs: .
