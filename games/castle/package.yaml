@@ -1,7 +1,7 @@
 name: castle
 version: 0.1
 synopsis: Toy text adventure demonstrating hyzzy
-license:             CC0
+license:             PublicDomain
 author:              Samuel Gélineau
 maintainer:          gelisam+github@gmail.com
 category:            Game
