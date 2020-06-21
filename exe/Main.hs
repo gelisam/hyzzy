@@ -17,7 +17,6 @@ import Data.Foldable
 import Data.Function
 import Data.Generics.Labels ()
 import Data.List
-import Data.Map (Map)
 import Data.Maybe
 import GHC.Generics (Generic)
 import Language.Haskell.Interpreter hiding (eval)
@@ -28,6 +27,7 @@ import Type.Reflection (withTypeable)
 import qualified Data.Map as Map
 
 import Command
+import Inventory
 import Objects
 
 
@@ -63,8 +63,6 @@ extendCtxWithDynamic
 extendCtxWithDynamic termName (Dynamic typeRep a)
   = withTypeable typeRep $ extendCtx termName a
 
-
-type Inventory = Map TermName Dynamic
 
 initialInventory
   :: Inventory

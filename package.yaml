@@ -12,18 +12,18 @@ extra-source-files:
   - README.md
 ghc-options: -W -Wall
 
+dependencies:
+  - base
+  - containers
+
 library:
   source-dirs: lib
-  dependencies:
-    - base
 
 executables:
   hyzzy:
     source-dirs: exe
     main: Main
     dependencies:
-      - base
-      - containers
       - exceptions
       - generic-lens
       - haskeline
