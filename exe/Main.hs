@@ -20,6 +20,7 @@ import Data.Functor.Coyoneda
 import Data.Generics.Labels ()
 import Data.IORef
 import Data.List
+import Data.Map (Map)
 import Data.Maybe
 import Data.Unique
 import GHC.Generics (Generic)
@@ -33,7 +34,6 @@ import Type.Reflection (withTypeable)
 import qualified Data.Map as Map
 
 import Command
-import Inventory
 import Object
 
 
@@ -69,6 +69,14 @@ extendCtxWithDynamic
 extendCtxWithDynamic termName (Dynamic typeRep a)
   = withTypeable typeRep $ extendCtx termName a
 
+
+type Inventory = Map String Dynamic
+
+initialInventory
+  :: Inventory
+initialInventory
+  = mempty
+
 extendCtxWithInventory
   :: Inventory -> Ctx -> Ctx
 extendCtxWithInventory inventory ctx
@@ -81,6 +89,13 @@ data World = World
   { playerInventory :: Inventory
   }
   deriving Generic
+
+initialWorld
+  :: World
+initialWorld
+  = World
+    { playerInventory = initialInventory
+    }
 
 currentCtx
   :: M Ctx
@@ -110,11 +125,10 @@ liftI
   = M . lift
 
 runM
-  :: World
-  -> M a
-  -> Interpreter a
-runM world
-  = flip evalStateT world
+  :: M a -> IO (Either InterpreterError a)
+runM
+  = runInterpreter
+  . flip evalStateT initialWorld
   . unM
 
 
@@ -276,39 +290,36 @@ usage = do
 play
   :: FilePath -> IO ()
 play gameFolder = do
-  r <- runInterpreter $ do
-    loadModules [ gameFolder </> "Commands.hs"
-                , gameFolder </> "Objects.hs"
-                , gameFolder </> "PublicObjects.hs"
-                , gameFolder </> "Start.hs"
-                ]
-    setImports [ "BridgeTypes"
-               , "Commands", "PublicObjects", "Start"]
+  r <- runM $ do
+    liftI $ do
+      loadModules [ gameFolder </> "Commands.hs"
+                  , gameFolder </> "Objects.hs"
+                  , gameFolder </> "PublicObjects.hs"
+                  , gameFolder </> "Start.hs"
+                  ]
+      setImports [ "BridgeTypes"
+                 , "Commands", "PublicObjects", "Start"]
 
-    intro <- interpret "intro" infer
-    let initialWorld = World
-          { playerInventory = mempty
-          }
+    intro <- liftI $ interpret "intro" infer
+    runCommand intro
 
-    runM initialWorld $ do
-      runCommand intro
-      runInputT haskelineSettings $ fix $ \loop -> do
-        r <- try $ getInputLine "> "
-        case r of
-          Left UserInterrupt -> do
-            -- clear the line on Ctrl-C
-            loop
-          Left e -> do
-            throwM e
-          Right Nothing -> do
-            -- eof
-            pure ()
-          Right (Just input) -> do
-            lift $ processInput
-                 $ dropWhile (== ' ')
-                 $ dropWhileEnd (== ' ')
-                 $ input
-            loop
+    runInputT haskelineSettings $ fix $ \loop -> do
+      r <- try $ getInputLine "> "
+      case r of
+        Left UserInterrupt -> do
+          -- clear the line on Ctrl-C
+          loop
+        Left e -> do
+          throwM e
+        Right Nothing -> do
+          -- eof
+          pure ()
+        Right (Just input) -> do
+          lift $ processInput
+               $ dropWhile (== ' ')
+               $ dropWhileEnd (== ' ')
+               $ input
+          loop
   case r of
     Left e -> do
       print e
