@@ -27,6 +27,7 @@ executables:
     main: Main
     dependencies:
       - exceptions
+      - filepath
       - generic-lens
       - haskeline
       - hint

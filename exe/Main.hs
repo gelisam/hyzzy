@@ -25,6 +25,8 @@ import Data.Unique
 import GHC.Generics (Generic)
 import Language.Haskell.Interpreter hiding (eval)
 import System.Console.Haskeline
+import System.FilePath
+import System.Environment
 import System.Exit
 import Text.Printf
 import Type.Reflection (withTypeable)
@@ -253,14 +255,28 @@ processInput input = do
     Right command -> do
       runCommand command
 
-main
+usage
   :: IO ()
-main = do
+usage = do
+  putStrLn "usage:"
+  putStrLn "  stack run hyzzy games/<game-name>"
+  putStrLn ""
+  putStrLn "Start the adventure described in the given folder."
+  putStrLn "That folder must contain at least the following files:"
+  putStrLn ""
+  putStrLn "  games/<game-name>/Commands.hs"
+  putStrLn "  games/<game-name>/Objects.hs"
+  putStrLn "  games/<game-name>/PublicObjects.hs"
+  putStrLn "  games/<game-name>/Start.hs"
+
+play
+  :: FilePath -> IO ()
+play gameFolder = do
   r <- runInterpreter $ do
-    loadModules [ "games/castle/Commands.hs"
-                , "games/castle/Objects.hs"
-                , "games/castle/PublicObjects.hs"
-                , "games/castle/Start.hs"
+    loadModules [ gameFolder </> "Commands.hs"
+                , gameFolder </> "Objects.hs"
+                , gameFolder </> "PublicObjects.hs"
+                , gameFolder </> "Start.hs"
                 ]
     setImports [ "BridgeTypes"
                , "Commands", "PublicObjects", "Start"]
@@ -295,3 +311,19 @@ main = do
       exitFailure
     Right () -> do
       pure ()
+
+main
+  :: IO ()
+main = do
+  getArgs >>= \case
+    [] -> do
+      usage
+    ["-h"] -> do
+      usage
+    ["--help"] -> do
+      usage
+    [gameFolder] -> do
+      play gameFolder
+    _ -> do
+      usage
+      exitFailure

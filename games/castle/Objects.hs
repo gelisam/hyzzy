@@ -1,5 +1,5 @@
 -- The objects with which the player can interact.
--- Remember to run ./regenPublicObjects.sh after modifying this file!
+-- Remember to run "./regenPublicObjects.sh games/castle" after modifying this file!
 module Objects where
 
 import Object
