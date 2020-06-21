@@ -248,10 +248,11 @@ main = do
   r <- runInterpreter $ do
     loadModules [ "games/castle/Commands.hs"
                 , "games/castle/Objects.hs"
-                , "games/castle/Public.hs"
+                , "games/castle/PublicObjects.hs"
                 , "games/castle/Start.hs"
                 ]
-    setImports ["Commands", "Objects", "Public", "Start"]
+    setImports [ "BridgeTypes"
+               , "Commands", "PublicObjects", "Start"]
 
     intro <- interpret "intro" infer
     initialInventory <- interpret "initialInventory" infer
