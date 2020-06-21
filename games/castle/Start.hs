@@ -1,3 +1,4 @@
+-- The state of the game at the beginning of the adventure.
 {-# LANGUAGE OverloadedStrings #-}
 module Start where
 

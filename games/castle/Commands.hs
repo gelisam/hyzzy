@@ -1,3 +1,4 @@
+-- Commands which are available in every room.
 {-# LANGUAGE OverloadedStrings #-}
 module Commands where
 
