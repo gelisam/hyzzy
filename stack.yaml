@@ -1,5 +1,6 @@
 resolver: lts-15.11
 packages:
   - .
+  - games/castle
 extra-deps:
 - haskeline-0.8.0.0

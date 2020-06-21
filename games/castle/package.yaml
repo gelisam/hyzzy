@@ -1,0 +1,16 @@
+name: castle
+version: 0.1
+synopsis: Toy text adventure demonstrating hyzzy
+license:             CC0
+author:              Samuel Gélineau
+maintainer:          gelisam+github@gmail.com
+category:            Game
+ghc-options: -W -Wall
+
+dependencies:
+  - base
+  - containers
+  - hyzzy
+
+library:
+  source-dirs: .
