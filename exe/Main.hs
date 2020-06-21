@@ -198,10 +198,10 @@ runCommandF
 runCommandF = \case
   Display s -> do
     liftIO $ putStrLn s
-  AddToInventory name mkObject fields -> do
+  AddToInventory name ctor fields -> do
     unique <- liftIO newUnique
     object <- liftIO
-            $ mkObject
+            $ ctor
           <$> Object unique
           <$> newIORef fields
     liftW $ modifying (#playerInventory . #inventoryNames)

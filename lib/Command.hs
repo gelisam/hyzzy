@@ -16,7 +16,7 @@ data CommandF r where
   Display        :: String -> CommandF ()
   AddToInventory :: Typeable object
                  => String
-                 -> (Object fields -> object)
+                 -> Ctor object fields
                  -> fields
                  -> CommandF ()
   GetFields      :: Object fields
@@ -39,7 +39,7 @@ display s
 addToInventory
   :: Typeable object
   => String
-  -> (Object fields -> object)  -- e.g. 'Foo' for 'newtype Foo = Foo (Object FooFields)'
+  -> Ctor object fields
   -> fields
   -> Command
 addToInventory name mkObject fields
@@ -56,7 +56,7 @@ getFields object
 
 setField
   :: Coercible object (Object fields)
-  => (Object fields -> object)  -- e.g. 'Foo' for 'newtype Foo = Foo (Object FooFields)'
+  => Ctor object fields
   -> object
   -> Lens' fields field
   -> field
@@ -68,7 +68,7 @@ setField _ object field value
 consume
   :: forall object fields
    . Coercible object (Object fields)
-  => (Object fields -> object)  -- e.g. 'Foo' for 'newtype Foo = Foo (Object FooFields)'
+  => Ctor object fields
   -> object
   -> Command
 consume _ object
