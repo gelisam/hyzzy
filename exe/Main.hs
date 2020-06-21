@@ -28,7 +28,6 @@ import qualified Data.Map as Map
 
 import Command
 import Inventory
-import Objects
 
 
 type TermName = String
@@ -63,15 +62,6 @@ extendCtxWithDynamic
 extendCtxWithDynamic termName (Dynamic typeRep a)
   = withTypeable typeRep $ extendCtx termName a
 
-
-initialInventory
-  :: Inventory
-initialInventory
-  = Map.fromList
-    [ ("door", toDyn Door)  -- TODO: put the door in the environment, not in the inventory!
-    , ("key", toDyn Key)
-    ]
-
 extendCtxWithInventory
   :: Inventory -> Ctx -> Ctx
 extendCtxWithInventory inventory ctx
@@ -84,13 +74,6 @@ data World = World
   { playerInventory :: Inventory
   }
   deriving Generic
-
-initialWorld
-  :: World
-initialWorld
-  = World
-    { playerInventory = initialInventory
-    }
 
 currentCtx
   :: M Ctx
@@ -120,11 +103,11 @@ liftI
   = M . lift
 
 runM
-  :: M a
-  -> IO (Either InterpreterError a)
-runM
-  = runInterpreter
-  . flip evalStateT initialWorld
+  :: World
+  -> M a
+  -> Interpreter a
+runM world
+  = flip evalStateT world
   . unM
 
 
@@ -243,25 +226,31 @@ main
 main = do
   putStrLn "A toy text adventure where commands have Haskell types."
   putStrLn "Type \":help\" to view the meta-commands."
-  r <- runM $ do
-    liftI $ setImports ["Public"]
-    runInputT haskelineSettings $ fix $ \loop -> do
-      r <- try $ getInputLine "> "
-      case r of
-        Left UserInterrupt -> do
-          -- clear the line on Ctrl-C
-          loop
-        Left e -> do
-          throwM e
-        Right Nothing -> do
-          -- eof
-          pure ()
-        Right (Just input) -> do
-          lift $ processInput
-               $ dropWhile (== ' ')
-               $ dropWhileEnd (== ' ')
-               $ input
-          loop
+  r <- runInterpreter $ do
+    loadModules ["games/castle/Start.hs"]
+    setImports ["Public", "Start"]
+    initialInventory <- interpret "initialInventory" infer
+    let initialWorld = World
+          { playerInventory = initialInventory
+          }
+    runM initialWorld $ do
+      runInputT haskelineSettings $ fix $ \loop -> do
+        r <- try $ getInputLine "> "
+        case r of
+          Left UserInterrupt -> do
+            -- clear the line on Ctrl-C
+            loop
+          Left e -> do
+            throwM e
+          Right Nothing -> do
+            -- eof
+            pure ()
+          Right (Just input) -> do
+            lift $ processInput
+                 $ dropWhile (== ' ')
+                 $ dropWhileEnd (== ' ')
+                 $ input
+            loop
   case r of
     Left e -> do
       print e
