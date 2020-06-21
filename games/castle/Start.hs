@@ -1,5 +1,4 @@
 -- The state of the game at the beginning of the adventure.
-{-# LANGUAGE OverloadedStrings #-}
 module Start where
 
 import Data.Dynamic
@@ -13,14 +12,12 @@ import Objects
 intro
   :: Command
 intro = do
-  "A toy text adventure where commands have Haskell types.\n\
-  \Type \":help\" to view the meta-commands."
+  display "A toy text adventure where commands have Haskell types."
+  display "Type \":help\" to view the meta-commands."
 
+  -- TODO: put the door in the environment, not in the inventory!
+  addToInventory "door" Door $ DoorFields
+    { doorLocked = True
+    }
 
-initialInventory
-  :: Inventory
-initialInventory
-  = Map.fromList
-    [ ("door", toDyn Door)  -- TODO: put the door in the environment, not in the inventory!
-    , ("key", toDyn Key)
-    ]
+  addToInventory "key" Key ()

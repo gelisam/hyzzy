@@ -18,8 +18,10 @@ import Data.Foldable
 import Data.Function
 import Data.Functor.Coyoneda
 import Data.Generics.Labels ()
+import Data.IORef
 import Data.List
 import Data.Maybe
+import Data.Unique
 import GHC.Generics (Generic)
 import Language.Haskell.Interpreter hiding (eval)
 import System.Console.Haskeline
@@ -30,6 +32,7 @@ import qualified Data.Map as Map
 
 import Command
 import Inventory
+import Object
 
 
 type TermName = String
@@ -166,6 +169,14 @@ runCommandF
 runCommandF = \case
   Display s -> do
     liftIO $ putStrLn s
+  AddToInventory name mkObject fields -> do
+    object <- liftIO
+            $ mkObject
+          <$> (Object <$> newUnique
+                      <*> newIORef fields)
+    liftW $ modifying #playerInventory
+          $ Map.insert name
+          $ toDyn object
 
 
 data MetaCommand = MetaCommand
@@ -255,9 +266,8 @@ main = do
                , "Commands", "PublicObjects", "Start"]
 
     intro <- interpret "intro" infer
-    initialInventory <- interpret "initialInventory" infer
     let initialWorld = World
-          { playerInventory = initialInventory
+          { playerInventory = mempty
           }
 
     runM initialWorld $ do

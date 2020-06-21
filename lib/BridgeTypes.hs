@@ -5,6 +5,9 @@ module BridgeTypes
 
     -- needed for the game-specific commands.
   , Command, CommandF, Coyoneda, Free
+
+    -- needed for the game-specific objects.
+  , Object
   ) where
 
 import Control.Monad.Free
@@ -13,3 +16,4 @@ import Data.Functor.Coyoneda
 import Data.Map
 
 import Command
+import Object

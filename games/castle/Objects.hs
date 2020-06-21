@@ -2,5 +2,12 @@
 -- Remember to also add them to PublicObjects.hs!
 module Objects where
 
-data Key = Key
-data Door = Door
+import Object
+
+
+newtype Key = Key (Object ())
+
+newtype Door = Door (Object DoorFields)
+data DoorFields = DoorFields
+  { doorLocked :: Bool
+  }
