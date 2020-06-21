@@ -1,4 +1,4 @@
-{-# LANGUAGE DeriveFunctor, FlexibleContexts, FlexibleInstances, GADTs, RankNTypes, TypeSynonymInstances #-}
+{-# LANGUAGE DeriveFunctor, FlexibleContexts, FlexibleInstances, GADTs, RankNTypes, ScopedTypeVariables, TypeApplications, TypeSynonymInstances #-}
 module Command where
 
 import Control.Lens
@@ -24,6 +24,8 @@ data CommandF r where
   SetField       :: Object fields
                  -> Lens' fields field
                  -> field
+                 -> CommandF ()
+  Consume        :: Object fields
                  -> CommandF ()
 
 type Command = Free (Coyoneda CommandF) ()
@@ -62,6 +64,16 @@ setField
 setField _ object field value
   = liftF $ liftCoyoneda
   $ SetField (coerce object) field value
+
+consume
+  :: forall object fields
+   . Coercible object (Object fields)
+  => (Object fields -> object)  -- e.g. 'Foo' for 'newtype Foo = Foo (Object FooFields)'
+  -> object
+  -> Command
+consume _ object
+  = liftF $ liftCoyoneda
+  $ Consume (coerce @object @(Object fields) object)
 
 instance IsString Command where
   fromString = display

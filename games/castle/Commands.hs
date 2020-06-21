@@ -21,6 +21,7 @@ open door = do
        "The door opens with a drawn-out yawn. You're in!"
 
 unlock :: Key -> Door -> Command
-unlock _ door = do
+unlock key door = do
+  consume Key key
   setField Door door #doorLocked False
   "That random key you happened to carry in your pockets happens to fit the lock. What are the odds?"

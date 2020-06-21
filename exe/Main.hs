@@ -20,7 +20,7 @@ import Data.Functor.Coyoneda
 import Data.Generics.Labels ()
 import Data.IORef
 import Data.List
-import Data.Map (Map)
+import Data.Map (Map, (!))
 import Data.Maybe
 import Data.Unique
 import GHC.Generics (Generic)
@@ -70,18 +70,30 @@ extendCtxWithDynamic termName (Dynamic typeRep a)
   = withTypeable typeRep $ extendCtx termName a
 
 
-type Inventory = Map String Dynamic
+data Inventory = Inventory
+  { inventoryNames :: Map TermName Unique
+  , inventoryItems :: Map Unique Dynamic
+  }
+  deriving Generic
 
 initialInventory
   :: Inventory
 initialInventory
-  = mempty
+  = Inventory mempty mempty
+
+inventoryToList
+  :: Inventory
+  -> [(TermName, Dynamic)]
+inventoryToList (Inventory {..})
+  = [ (name, inventoryItems ! unique)
+    | (name, unique) <- Map.toList inventoryNames
+    ]
 
 extendCtxWithInventory
   :: Inventory -> Ctx -> Ctx
 extendCtxWithInventory inventory ctx
   = foldr (uncurry extendCtxWithDynamic) ctx
-  . Map.toList
+  . inventoryToList
   $ inventory
 
 
@@ -150,7 +162,8 @@ completionFunc (reversedLhs, _) = do
   names <- execWriterT $ do
     tell $ toListOf (each . #metaCommandName) metaCommands
     tell =<< lift availableCommandNames
-    (tell =<<) $ lift $ liftW $ use (#playerInventory . to Map.keys)
+    (tell =<<) $ lift $ liftW
+               $ use (#playerInventory . #inventoryNames . to Map.keys)
   completions <- execWriterT $ do
     for_ names $ \name -> do
       when (wordPrefix `isPrefixOf` name) $ do
@@ -186,17 +199,24 @@ runCommandF = \case
   Display s -> do
     liftIO $ putStrLn s
   AddToInventory name mkObject fields -> do
+    unique <- liftIO newUnique
     object <- liftIO
             $ mkObject
-          <$> (Object <$> newUnique
-                      <*> newIORef fields)
-    liftW $ modifying #playerInventory
-          $ Map.insert name
-          $ toDyn object
+          <$> Object unique
+          <$> newIORef fields
+    liftW $ modifying (#playerInventory . #inventoryNames)
+          $ Map.insert name unique
+    liftW $ modifying (#playerInventory . #inventoryItems)
+          $ Map.insert unique (toDyn object)
   GetFields (Object {..}) -> do
     liftIO $ readIORef objectFields
   SetField (Object {..}) field value -> do
     liftIO $ modifyIORef objectFields (field .~ value)
+  Consume (Object {..}) -> do
+    liftW $ modifying (#playerInventory . #inventoryNames)
+          $ Map.filter (/= objectId)
+    liftW $ modifying (#playerInventory . #inventoryItems)
+          $ Map.delete objectId
 
 
 data MetaCommand = MetaCommand
@@ -222,7 +242,7 @@ metaCommands
           liftIO $ putStrLn $ commandName ++ " :: " ++ typeName
     , MetaCommand ":inventory" "List the objects you have picked up so far." $ do
         inventory <- liftW $ use #playerInventory
-        for_ (Map.toList inventory) $ \(objectName, object) -> do
+        for_ (inventoryToList inventory) $ \(objectName, object) -> do
           let typeName = show . dynTypeRep $ object
           liftIO $ putStrLn $ objectName ++ " :: " ++ typeName
     , MetaCommand ":quit" "Abandon the quest (Ctrl-D works too)." $ do
