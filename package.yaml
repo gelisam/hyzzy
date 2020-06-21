@@ -4,7 +4,7 @@ synopsis: Text adventures where actions have types
 description: A framework for defining text adventures via Haskell files. Play by combining functions, not by guessing phrases.
 homepage:            https://github.com/gelisam/hyzzy#readme
 github:              gelisam/hyzzy
-license:             PublicDomain
+license:             CC0
 author:              Samuel Gélineau
 maintainer:          gelisam+github@gmail.com
 category:            Game
