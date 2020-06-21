@@ -1,5 +1,5 @@
 -- The objects with which the player can interact.
--- Remember to also add them to PublicObjects.hs!
+-- Remember to run ./regenPublicObjects.sh after modifying this file!
 module Objects where
 
 import Object
