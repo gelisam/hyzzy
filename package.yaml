@@ -16,6 +16,7 @@ dependencies:
   - base
   - containers
   - free
+  - kan-extensions
 
 library:
   source-dirs: lib

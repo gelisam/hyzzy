@@ -4,11 +4,12 @@ module BridgeTypes
     Char, Dynamic, Map
 
     -- needed for the game-specific commands.
-  , Command, CommandF, Free
+  , Command, CommandF, Coyoneda, Free
   ) where
 
 import Control.Monad.Free
 import Data.Dynamic
+import Data.Functor.Coyoneda
 import Data.Map
 
 import Command

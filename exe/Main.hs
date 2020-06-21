@@ -1,4 +1,4 @@
-{-# LANGUAGE DeriveGeneric, GeneralizedNewtypeDeriving, LambdaCase, OverloadedLabels, RankNTypes, RecordWildCards, ViewPatterns #-}
+{-# LANGUAGE DeriveGeneric, GADTs, GeneralizedNewtypeDeriving, LambdaCase, OverloadedLabels, RankNTypes, RecordWildCards, ViewPatterns #-}
 {-# OPTIONS -Wno-name-shadowing #-}
 module Main where
 
@@ -16,6 +16,7 @@ import Data.Char
 import Data.Dynamic
 import Data.Foldable
 import Data.Function
+import Data.Functor.Coyoneda
 import Data.Generics.Labels ()
 import Data.List
 import Data.Maybe
@@ -157,15 +158,14 @@ runCommand
   :: Command
   -> M ()
 runCommand
-  = foldFree runCommandF
+  = foldFree (lowerM . hoistCoyoneda runCommandF)
 
 runCommandF
   :: CommandF a
   -> M a
 runCommandF = \case
-  Display s a -> do
+  Display s -> do
     liftIO $ putStrLn s
-    pure a
 
 
 data MetaCommand = MetaCommand
