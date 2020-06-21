@@ -224,15 +224,18 @@ processInput input = do
 main
   :: IO ()
 main = do
-  putStrLn "A toy text adventure where commands have Haskell types."
-  putStrLn "Type \":help\" to view the meta-commands."
   r <- runInterpreter $ do
     loadModules ["games/castle/Start.hs"]
     setImports ["Public", "Start"]
+
+    intro <- interpret "intro" infer
+    liftIO $ runCommand intro
+
     initialInventory <- interpret "initialInventory" infer
     let initialWorld = World
           { playerInventory = initialInventory
           }
+
     runM initialWorld $ do
       runInputT haskelineSettings $ fix $ \loop -> do
         r <- try $ getInputLine "> "
