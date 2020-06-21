@@ -1,11 +1,7 @@
 -- The state of the game at the beginning of the adventure.
 module Start where
 
-import Data.Dynamic
-import qualified Data.Map as Map
-
 import Command
-import Inventory
 import Objects
 
 
