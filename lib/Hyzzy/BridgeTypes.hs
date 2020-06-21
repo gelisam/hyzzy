@@ -1,5 +1,5 @@
 -- The types of all the values transfered between the game and hyzzy.
-module BridgeTypes
+module Hyzzy.BridgeTypes
   ( -- needed for the inventory.
     Char, Dynamic, Map
 
@@ -15,5 +15,5 @@ import Data.Dynamic
 import Data.Functor.Coyoneda
 import Data.Map
 
-import Command
-import Object
+import Hyzzy.Command
+import Hyzzy.Object

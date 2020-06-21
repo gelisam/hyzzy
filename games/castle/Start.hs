@@ -1,7 +1,8 @@
 -- The state of the game at the beginning of the adventure.
 module Start where
 
-import Command
+import Hyzzy.Command
+
 import Objects
 
 

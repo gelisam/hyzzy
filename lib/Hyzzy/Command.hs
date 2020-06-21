@@ -1,5 +1,5 @@
 {-# LANGUAGE DeriveFunctor, FlexibleContexts, FlexibleInstances, GADTs, RankNTypes, ScopedTypeVariables, TypeApplications, TypeSynonymInstances #-}
-module Command where
+module Hyzzy.Command where
 
 import Control.Lens
 import Control.Monad.Free
@@ -8,7 +8,7 @@ import Data.Functor.Coyoneda
 import Data.String
 import Data.Typeable
 
-import Object
+import Hyzzy.Object
 
 
 

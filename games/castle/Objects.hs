@@ -5,7 +5,7 @@ module Objects where
 
 import GHC.Generics
 
-import Object
+import Hyzzy.Object
 
 
 newtype Key = Key (Object ())

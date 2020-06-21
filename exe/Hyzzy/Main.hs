@@ -1,6 +1,6 @@
 {-# LANGUAGE DeriveGeneric, GADTs, GeneralizedNewtypeDeriving, LambdaCase, OverloadedLabels, RankNTypes, RecordWildCards, ViewPatterns #-}
 {-# OPTIONS -Wno-name-shadowing #-}
-module Main where
+module Hyzzy.Main where
 
 import Control.Exception (AsyncException(UserInterrupt))
 import Control.Lens
@@ -33,8 +33,8 @@ import Text.Printf
 import Type.Reflection (withTypeable)
 import qualified Data.Map as Map
 
-import Command
-import Object
+import Hyzzy.Command
+import Hyzzy.Object
 
 
 type GamePath = FilePath
@@ -269,7 +269,7 @@ initialize gamePath = do
                 , gamePath </> "Start.hs"
                 ]
 
-  liftI $ setImports ["BridgeTypes", "Start"]
+  liftI $ setImports ["Hyzzy.BridgeTypes", "Start"]
   intro <- liftI $ interpret "intro" infer
   runCommand intro
 
@@ -309,7 +309,7 @@ play gamePath = do
   r <- runM $ do
     initialize gamePath
 
-    liftI $ setImports ["BridgeTypes", "Commands", "PublicObjects"]
+    liftI $ setImports ["Hyzzy.BridgeTypes", "Commands", "PublicObjects"]
     runInputT haskelineSettings $ fix $ \loop -> do
       r <- try $ getInputLine "> "
       case r of

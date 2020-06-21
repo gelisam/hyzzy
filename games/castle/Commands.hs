@@ -4,7 +4,8 @@ module Commands where
 
 import Data.Generics.Labels ()
 
-import Command
+import Hyzzy.Command
+
 import Objects
 
 

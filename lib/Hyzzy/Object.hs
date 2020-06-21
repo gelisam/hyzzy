@@ -1,4 +1,4 @@
-module Object where
+module Hyzzy.Object where
 
 import Data.IORef
 import Data.Unique
