@@ -37,6 +37,7 @@ import Command
 import Object
 
 
+type GamePath = FilePath
 type TermName = String
 type TypeName = String
 
@@ -187,14 +188,12 @@ availableCommandNames = execWriterT $ do
       pure ()
 
 runCommand
-  :: Command
-  -> M ()
+  :: Command -> M ()
 runCommand
   = foldFree (lowerM . hoistCoyoneda runCommandF)
 
 runCommandF
-  :: CommandF a
-  -> M a
+  :: CommandF a -> M a
 runCommandF = \case
   Display s -> do
     liftIO $ putStrLn s
@@ -250,21 +249,32 @@ metaCommands
     ]
 
 lookupMetaCommand
-  :: String
-  -> Maybe MetaCommand
+  :: String -> Maybe MetaCommand
 lookupMetaCommand name
   = elemIndexOf (each .> selfIndex <. #metaCommandName) name metaCommands
 
 runMetaCommand
-  :: MetaCommand
-  -> M ()
+  :: MetaCommand -> M ()
 runMetaCommand
   = metaCommandAction
 
 
+initialize
+  :: GamePath -> M ()
+initialize gamePath = do
+  liftI $ do
+    loadModules [ gamePath </> "Commands.hs"
+                , gamePath </> "Objects.hs"
+                , gamePath </> "PublicObjects.hs"
+                , gamePath </> "Start.hs"
+                ]
+
+  liftI $ setImports ["BridgeTypes", "Start"]
+  intro <- liftI $ interpret "intro" infer
+  runCommand intro
+
 processInput
-  :: String
-  -> M ()
+  :: String -> M ()
 processInput "" = do
   pure ()
 processInput (lookupMetaCommand -> Just metaCommand) = do
@@ -293,36 +303,13 @@ processInput input = do
     Right command -> do
       runCommand command
 
-usage
-  :: IO ()
-usage = do
-  putStrLn "usage:"
-  putStrLn "  stack run hyzzy games/<game-name>"
-  putStrLn ""
-  putStrLn "Start the adventure described in the given folder."
-  putStrLn "That folder must contain at least the following files:"
-  putStrLn ""
-  putStrLn "  games/<game-name>/Commands.hs"
-  putStrLn "  games/<game-name>/Objects.hs"
-  putStrLn "  games/<game-name>/PublicObjects.hs"
-  putStrLn "  games/<game-name>/Start.hs"
-
 play
-  :: FilePath -> IO ()
-play gameFolder = do
+  :: GamePath -> IO ()
+play gamePath = do
   r <- runM $ do
-    liftI $ do
-      loadModules [ gameFolder </> "Commands.hs"
-                  , gameFolder </> "Objects.hs"
-                  , gameFolder </> "PublicObjects.hs"
-                  , gameFolder </> "Start.hs"
-                  ]
-      setImports [ "BridgeTypes"
-                 , "Commands", "PublicObjects", "Start"]
+    initialize gamePath
 
-    intro <- liftI $ interpret "intro" infer
-    runCommand intro
-
+    liftI $ setImports ["BridgeTypes", "Commands", "PublicObjects"]
     runInputT haskelineSettings $ fix $ \loop -> do
       r <- try $ getInputLine "> "
       case r of
@@ -347,6 +334,21 @@ play gameFolder = do
     Right () -> do
       pure ()
 
+
+usage
+  :: IO ()
+usage = do
+  putStrLn "usage:"
+  putStrLn "  stack run hyzzy games/<game-name>"
+  putStrLn ""
+  putStrLn "Start the adventure described in the given folder."
+  putStrLn "That folder must contain at least the following files:"
+  putStrLn ""
+  putStrLn "  games/<game-name>/Commands.hs"
+  putStrLn "  games/<game-name>/Objects.hs"
+  putStrLn "  games/<game-name>/PublicObjects.hs"
+  putStrLn "  games/<game-name>/Start.hs"
+
 main
   :: IO ()
 main = do
@@ -357,8 +359,8 @@ main = do
       usage
     ["--help"] -> do
       usage
-    [gameFolder] -> do
-      play gameFolder
+    [gamePath] -> do
+      play gamePath
     _ -> do
       usage
       exitFailure
