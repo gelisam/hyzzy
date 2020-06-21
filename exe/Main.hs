@@ -225,8 +225,12 @@ main
   :: IO ()
 main = do
   r <- runInterpreter $ do
-    loadModules ["games/castle/Start.hs"]
-    setImports ["Public", "Start"]
+    loadModules [ "games/castle/Commands.hs"
+                , "games/castle/Objects.hs"
+                , "games/castle/Public.hs"
+                , "games/castle/Start.hs"
+                ]
+    setImports ["Commands", "Objects", "Public", "Start"]
 
     intro <- interpret "intro" infer
     liftIO $ runCommand intro
