@@ -4,7 +4,7 @@ module Public
     Char, Dynamic, Map
 
     -- needed for the game-specific commands.
-  , Command
+  , Command, CommandF, Free
 
     -- needed for the game-specific objects.
     -- only export the type constructors, not the data constructors,
@@ -12,6 +12,7 @@ module Public
   , Door, Key
   ) where
 
+import Control.Monad.Free
 import Data.Dynamic
 import Data.Map
 

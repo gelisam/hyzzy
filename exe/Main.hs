@@ -6,6 +6,7 @@ import Control.Exception (AsyncException(UserInterrupt))
 import Control.Lens
 import Control.Monad
 import Control.Monad.Catch
+import Control.Monad.Free
 import Control.Monad.IO.Class
 import Control.Monad.Morph (hoist)
 import Control.Monad.Trans.Class
@@ -152,6 +153,20 @@ availableCommandNames = execWriterT $ do
     _ -> do
       pure ()
 
+runCommand
+  :: Command
+  -> M ()
+runCommand
+  = foldFree runCommandF
+
+runCommandF
+  :: CommandF a
+  -> M a
+runCommandF = \case
+  Display s a -> do
+    liftIO $ putStrLn s
+    pure a
+
 
 data MetaCommand = MetaCommand
   { metaCommandName   :: String
@@ -189,6 +204,12 @@ lookupMetaCommand
 lookupMetaCommand name
   = elemIndexOf (each .> selfIndex <. #metaCommandName) name metaCommands
 
+runMetaCommand
+  :: MetaCommand
+  -> M ()
+runMetaCommand
+  = metaCommandAction
+
 
 processInput
   :: String
@@ -196,7 +217,7 @@ processInput
 processInput "" = do
   pure ()
 processInput (lookupMetaCommand -> Just metaCommand) = do
-  metaCommandAction metaCommand
+  runMetaCommand metaCommand
 processInput input = do
   ctx <- currentCtx
   r <- try $ eval ctx input
@@ -219,7 +240,7 @@ processInput input = do
     Left (GhcException e) -> do
       liftIO $ putStrLn e
     Right command -> do
-      liftIO $ runCommand command
+      runCommand command
 
 main
   :: IO ()
@@ -233,14 +254,13 @@ main = do
     setImports ["Commands", "Objects", "Public", "Start"]
 
     intro <- interpret "intro" infer
-    liftIO $ runCommand intro
-
     initialInventory <- interpret "initialInventory" infer
     let initialWorld = World
           { playerInventory = initialInventory
           }
 
     runM initialWorld $ do
+      runCommand intro
       runInputT haskelineSettings $ fix $ \loop -> do
         r <- try $ getInputLine "> "
         case r of
