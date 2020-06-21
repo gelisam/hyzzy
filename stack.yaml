@@ -1,16 +1,4 @@
-#compiler: ghc-git-89d9e554a4e87a8ea45ee77a6a60d972f4eca726-quick
-#compiler-repository: git@gitlab.haskell.org:trac-isovector/ghc.git
-#
-#compiler: ghc-7.8.4
-#compiler: ghc-8.6.3
-#compiler: ghc-8.9.0.20191029
 resolver: lts-15.11
-#resolver: lts-14.22
-#resolver: lts-13.19
-#resolver: lts-12.21
-#resolver: lts-11.22
-#resolver: lts-9.21
-#resolver: lts-2.22
 packages:
   - .
 extra-deps:
