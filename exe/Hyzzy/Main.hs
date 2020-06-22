@@ -103,13 +103,6 @@ data World = World
   }
   deriving Generic
 
-initialWorld
-  :: World
-initialWorld
-  = World
-    { playerInventory = initialInventory
-    }
-
 currentCtx
   :: M Ctx
 currentCtx = do
@@ -138,10 +131,9 @@ liftI
   = M . lift
 
 runM
-  :: M a -> IO (Either InterpreterError a)
-runM
-  = runInterpreter
-  . flip evalStateT initialWorld
+  :: World -> M a -> Interpreter a
+runM world
+  = flip evalStateT world
   . unM
 
 
@@ -260,18 +252,17 @@ runMetaCommand
 
 
 initialize
-  :: GamePath -> M ()
+  :: GamePath -> Interpreter World
 initialize gamePath = do
-  liftI $ do
-    loadModules [ gamePath </> "Commands.hs"
-                , gamePath </> "Objects.hs"
-                , gamePath </> "PublicObjects.hs"
-                , gamePath </> "Start.hs"
-                ]
+  loadModules [ gamePath </> "Commands.hs"
+              , gamePath </> "Objects.hs"
+              , gamePath </> "PublicObjects.hs"
+              , gamePath </> "Start.hs"
+              ]
 
-  liftI $ setImports ["Hyzzy.BridgeTypes", "Start"]
-  intro <- liftI $ interpret "intro" infer
-  runCommand intro
+  pure $ World
+    { playerInventory = initialInventory
+    }
 
 processInput
   :: String -> M ()
@@ -306,27 +297,31 @@ processInput input = do
 play
   :: GamePath -> IO ()
 play gamePath = do
-  r <- runM $ do
-    initialize gamePath
+  r <- runInterpreter $ do
+    world <- initialize gamePath
+    runM world $ do
+      liftI $ setImports ["Hyzzy.BridgeTypes", "Start"]
+      intro <- liftI $ interpret "intro" infer
+      runCommand intro
 
-    liftI $ setImports ["Hyzzy.BridgeTypes", "Commands", "PublicObjects"]
-    runInputT haskelineSettings $ fix $ \loop -> do
-      r <- try $ getInputLine "> "
-      case r of
-        Left UserInterrupt -> do
-          -- clear the line on Ctrl-C
-          loop
-        Left e -> do
-          throwM e
-        Right Nothing -> do
-          -- eof
-          pure ()
-        Right (Just input) -> do
-          lift $ processInput
-               $ dropWhile (== ' ')
-               $ dropWhileEnd (== ' ')
-               $ input
-          loop
+      liftI $ setImports ["Hyzzy.BridgeTypes", "Commands", "PublicObjects"]
+      runInputT haskelineSettings $ fix $ \loop -> do
+        r <- try $ getInputLine "> "
+        case r of
+          Left UserInterrupt -> do
+            -- clear the line on Ctrl-C
+            loop
+          Left e -> do
+            throwM e
+          Right Nothing -> do
+            -- eof
+            pure ()
+          Right (Just input) -> do
+            lift $ processInput
+                 $ dropWhile (== ' ')
+                 $ dropWhileEnd (== ' ')
+                 $ input
+            loop
   case r of
     Left e -> do
       print e
