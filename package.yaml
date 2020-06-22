@@ -28,6 +28,7 @@ executables:
     main: Hyzzy.Main
     dependencies:
       - containers
+      - directory
       - exceptions
       - filepath
       - haskeline

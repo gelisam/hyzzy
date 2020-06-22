@@ -1,4 +1,4 @@
-{-# LANGUAGE DeriveGeneric, GADTs, GeneralizedNewtypeDeriving, LambdaCase, OverloadedLabels, RankNTypes, RecordWildCards, ViewPatterns #-}
+{-# LANGUAGE DeriveGeneric, GADTs, GeneralizedNewtypeDeriving, LambdaCase, OverloadedLabels, RankNTypes, RecordWildCards, TypeApplications, ViewPatterns #-}
 {-# OPTIONS -Wno-name-shadowing #-}
 module Hyzzy.Main where
 
@@ -22,19 +22,24 @@ import Data.IORef
 import Data.List
 import Data.Map (Map, (!))
 import Data.Maybe
+import Data.Proxy
 import Data.Unique
 import GHC.Generics (Generic)
-import Language.Haskell.Interpreter hiding (eval)
+import Language.Haskell.Interpreter (Interpreter, InterpreterError, InterpreterT, ModuleName)
 import System.Console.Haskeline
+import System.Directory
 import System.FilePath
 import System.Environment
 import System.Exit
 import Text.Printf
-import Type.Reflection (withTypeable)
+import Type.Reflection (SomeTypeRep, TyCon)
 import qualified Data.Map as Map
+import qualified Language.Haskell.Interpreter as I
+import qualified Type.Reflection as Typeable
 
 import Hyzzy.Command
 import Hyzzy.Object
+import Hyzzy.Room
 
 
 type GamePath = FilePath
@@ -52,7 +57,7 @@ newtype Ctx = Ctx
 emptyCtx
   :: Ctx
 emptyCtx = Ctx $ \code -> do
-  liftI $ interpret code infer
+  liftI $ I.interpret code I.infer
 
 extendCtx
   :: Typeable a
@@ -68,7 +73,7 @@ extendCtxWithDynamic
   -> Dynamic
   -> Ctx -> Ctx
 extendCtxWithDynamic termName (Dynamic typeRep a)
-  = withTypeable typeRep $ extendCtx termName a
+  = Typeable.withTypeable typeRep $ extendCtx termName a
 
 
 data Inventory = Inventory
@@ -97,9 +102,20 @@ extendCtxWithInventory inventory ctx
   . inventoryToList
   $ inventory
 
+newObject
+  :: Ctor object fields
+  -> fields
+  -> IO (Unique, object)
+newObject ctor fields = do
+  unique <- newUnique
+  object <- Object unique <$> newIORef fields
+  pure (unique, ctor object)
+
 
 data World = World
   { playerInventory :: Inventory
+  , playerLocation  :: RoomName
+  , worldRooms      :: Map RoomName Room
   }
   deriving Generic
 
@@ -107,7 +123,11 @@ currentCtx
   :: M Ctx
 currentCtx = do
   inventory <- liftW $ use #playerInventory
-  pure $ extendCtxWithInventory inventory emptyCtx
+  roomName  <- liftW $ use #playerLocation
+  room      <- liftW $ use (#worldRooms . to (! roomName))
+  pure $ extendCtxWithInventory inventory
+       $ extendCtxWithRoom room
+       $ emptyCtx
 
 
 newtype M a = M
@@ -171,13 +191,8 @@ completionFunc (reversedLhs, _) = do
 
 availableCommandNames
   :: M [TermName]
-availableCommandNames = execWriterT $ do
-  moduleElems <- lift . liftI $ getModuleExports "Commands"
-  for_ moduleElems $ \case
-    Fun functionName -> do
-      tell [functionName]
-    _ -> do
-      pure ()
+availableCommandNames = liftI $ do
+  loadModuleDefs "Commands"
 
 runCommand
   :: Command -> M ()
@@ -190,11 +205,7 @@ runCommandF = \case
   Display s -> do
     liftIO $ putStrLn s
   AddToInventory name ctor fields -> do
-    unique <- liftIO newUnique
-    object <- liftIO
-            $ ctor
-          <$> Object unique
-          <$> newIORef fields
+    (unique, object) <- liftIO $ newObject ctor fields
     liftW $ modifying (#playerInventory . #inventoryNames)
           $ Map.insert name unique
     liftW $ modifying (#playerInventory . #inventoryItems)
@@ -229,7 +240,7 @@ metaCommands
     , MetaCommand ":browse" "List all the commands you can perform." $ do
         commandNames <- availableCommandNames
         for_ commandNames $ \commandName -> do
-          typeName <- liftI $ typeOf commandName
+          typeName <- liftI $ typeNameOf commandName
           liftIO $ putStrLn $ commandName ++ " :: " ++ typeName
     , MetaCommand ":inventory" "List the objects you have picked up so far." $ do
         inventory <- liftW $ use #playerInventory
@@ -251,17 +262,169 @@ runMetaCommand
   = metaCommandAction
 
 
+typeNameOf
+  :: TermName
+  -> Interpreter TypeName
+typeNameOf
+  = I.typeOf
+
+someTypeRepOf
+  :: TermName
+  -> Interpreter SomeTypeRep
+someTypeRepOf termName = do
+  dynTypeRep <$> loadDynamic termName
+
+tyConOf
+  :: TermName
+  -> Interpreter TyCon
+tyConOf termName = do
+  Typeable.someTypeRepTyCon <$> someTypeRepOf termName
+
+loadDynamic
+  :: TermName
+  -> Interpreter Dynamic
+loadDynamic termName = do
+  I.interpret ("toDyn " ++ termName) I.infer
+
+instanceTyCon
+  :: TyCon
+instanceTyCon
+  = Typeable.someTypeRepTyCon
+  $ Typeable.someTypeRep
+  $ Proxy @(Instance ())
+
+loadSomeInstance
+  :: TermName
+  -> Interpreter (Maybe SomeInstance)
+loadSomeInstance termName = do
+  tyCon <- tyConOf termName
+  if tyCon == instanceTyCon
+    then Just <$> do
+      I.interpret ("SomeInstance " ++ termName) I.infer
+    else do
+      pure Nothing
+
+loadModuleDefs
+  :: ModuleName
+  -> Interpreter [TermName]
+loadModuleDefs moduleName = do
+  moduleElems <- I.getModuleExports moduleName
+  execWriterT $ do
+    for_ moduleElems $ \case
+      I.Fun termName -> do
+        tell [termName]
+      _ -> do
+        pure ()
+
+loadModule
+  :: ModuleName -> Interpreter (Map TermName Dynamic)
+loadModule moduleName = do
+  I.setImports ["Data.Dynamic", moduleName]
+  termNames <- loadModuleDefs moduleName
+  execWriterT $ do
+    for_ termNames $ \termName -> do
+      dynamic <- lift $ loadDynamic termName
+      tell $ Map.singleton termName dynamic
+
+
+data Room = Room
+  { roomCommands        :: Map String Dynamic
+  , roomObjectNames     :: Map String Unique
+  , roomObjectInstances :: Map Unique Dynamic
+  }
+
+instance Semigroup Room where
+  Room x1 x2 x3 <> Room y1 y2 y3
+    = Room (x1 <> y1)
+           (x2 <> y2)
+           (x3 <> y3)
+
+instance Monoid Room where
+  mempty = emptyRoom
+
+emptyRoom
+  :: Room
+emptyRoom
+  = Room mempty
+         mempty
+         mempty
+
+roomToCommandList
+  :: Room -> [(TermName, Dynamic)]
+roomToCommandList
+  = Map.toList . roomCommands
+
+roomToObjectList
+  :: Room -> [(TermName, Dynamic)]
+roomToObjectList (Room {..})
+  = [ (name, roomObjectInstances ! unique)
+    | (name, unique) <- Map.toList roomObjectNames
+    ]
+
+roomModule
+  :: RoomName -> String
+roomModule roomName
+  = "Rooms." ++ unRoomName roomName
+
+loadRoom
+  :: RoomName -> Interpreter Room
+loadRoom roomName = do
+  let moduleName = roomModule roomName
+  I.setImports ["Data.Dynamic", "Hyzzy.Object", moduleName]
+  termNames <- loadModuleDefs moduleName
+  execWriterT $ do
+    for_ termNames $ \termName -> do
+      maybeSomeInstance <- lift $ loadSomeInstance termName
+      case maybeSomeInstance of
+        Just (SomeInstance (Instance ctor fields)) -> do
+          (unique, object) <- liftIO $ newObject ctor fields
+          tell $ emptyRoom
+            { roomObjectNames     = Map.singleton termName unique
+            , roomObjectInstances = Map.singleton unique (toDyn object)
+            }
+        Nothing -> do
+          dynamic <- lift $ loadDynamic termName
+          tell $ emptyRoom
+            { roomCommands = Map.singleton termName dynamic
+            }
+
+extendCtxWithRoom
+  :: Room -> Ctx -> Ctx
+extendCtxWithRoom room ctx
+  = foldr (uncurry extendCtxWithDynamic) ctx
+  $ roomToCommandList room
+ ++ roomToObjectList room
+
+
 initialize
   :: GamePath -> Interpreter World
 initialize gamePath = do
-  loadModules [ gamePath </> "Commands.hs"
-              , gamePath </> "Objects.hs"
-              , gamePath </> "PublicObjects.hs"
-              , gamePath </> "Start.hs"
-              ]
+  roomBasePaths <- liftIO $ listDirectory (gamePath </> "Rooms")
+  let roomNames = RoomName
+              <$> dropExtension
+              <$> roomBasePaths
+  let roomPaths = (gamePath </>)
+              <$> ("Rooms" </>)
+              <$> roomBasePaths
+  I.loadModules $ [ gamePath </> "Commands.hs"
+                  , gamePath </> "Objects.hs"
+                  , gamePath </> "PublicObjects.hs"
+                  , gamePath </> "Start.hs"
+                  ]
+               ++ roomPaths
+
+  rooms <- execWriterT $ do
+    for_ roomNames $ \roomName -> do
+      room <- lift $ loadRoom roomName
+      tell $ Map.singleton roomName room
+
+  I.setImports ["Hyzzy.BridgeTypes", "Start"]
+  startingRoom <- I.interpret "startingRoom" I.infer
 
   pure $ World
     { playerInventory = initialInventory
+    , playerLocation  = startingRoom
+    , worldRooms      = rooms
     }
 
 processInput
@@ -274,22 +437,22 @@ processInput input = do
   ctx <- currentCtx
   r <- try $ eval ctx input
   case r of
-    Left (UnknownError e) -> do
+    Left (I.UnknownError e) -> do
       liftIO $ putStrLn e
-    Left (WontCompile es) -> do
+    Left (I.WontCompile es) -> do
       -- does it at least type-check?
-      r <- liftI $ try $ typeOf input
+      r <- liftI $ try $ typeNameOf input
       case (r :: Either InterpreterError String) of
         Left _ -> do
-          -- show interpret's error, not typeOf's
+          -- show interpret's error, not typeNameOf's
           for_ es $ \e -> do
-            liftIO $ putStrLn $ errMsg e
+            liftIO $ putStrLn $ I.errMsg e
         Right typeName -> do
           -- e.g. "open :: Door -> Command"
           liftIO $ putStrLn $ input ++ " :: " ++ typeName
-    Left (NotAllowed e) -> do
+    Left (I.NotAllowed e) -> do
       liftIO $ putStrLn e
-    Left (GhcException e) -> do
+    Left (I.GhcException e) -> do
       liftIO $ putStrLn e
     Right command -> do
       runCommand command
@@ -297,14 +460,13 @@ processInput input = do
 play
   :: GamePath -> IO ()
 play gamePath = do
-  r <- runInterpreter $ do
+  r <- I.runInterpreter $ do
     world <- initialize gamePath
     runM world $ do
-      liftI $ setImports ["Hyzzy.BridgeTypes", "Start"]
-      intro <- liftI $ interpret "intro" infer
+      liftI $ I.setImports ["Hyzzy.BridgeTypes", "Start"]
+      intro <- liftI $ I.interpret "intro" I.infer
       runCommand intro
 
-      liftI $ setImports ["Hyzzy.BridgeTypes", "Commands", "PublicObjects"]
       runInputT haskelineSettings $ fix $ \loop -> do
         r <- try $ getInputLine "> "
         case r of
@@ -317,6 +479,10 @@ play gamePath = do
             -- eof
             pure ()
           Right (Just input) -> do
+            roomName <- lift . liftW $ use #playerLocation
+            lift . liftI $ I.setImports
+                         $ ["Hyzzy.BridgeTypes", "Commands", "PublicObjects"]
+                        ++ [roomModule roomName]
             lift $ processInput
                  $ dropWhile (== ' ')
                  $ dropWhileEnd (== ' ')

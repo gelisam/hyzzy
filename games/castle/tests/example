@@ -6,14 +6,12 @@ Type ":help" to view the meta-commands.
 :inventory  List the objects you have picked up so far.
 :quit       Abandon the quest (Ctrl-D works too).
 > :browse
-look :: Command
 open :: Door -> Command
 unlock :: Key -> Door -> Command
 > :inventory
-door :: Door
 key :: Key
 > look
-You stand in front of the castle's heavy heavy door.
+You stand in front of the castle's heavy door.
 > open
 open :: Door -> Command
 > open door
@@ -23,7 +21,6 @@ unlock :: Key -> Door -> Command
 > unlock key door
 That random key you happened to carry in your pockets happens to fit the lock. What are the odds?
 > :inventory
-door :: Door
 > open door
 The door opens with a drawn-out yawn. You're in!
 > :quit

@@ -9,9 +9,6 @@ import Hyzzy.Command
 import Objects
 
 
-look :: Command
-look = "You stand in front of the castle's heavy heavy door."
-
 open :: Door -> Command
 open door = do
   DoorFields {..} <- getFields door
