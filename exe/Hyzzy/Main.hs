@@ -119,12 +119,17 @@ data World = World
   }
   deriving Generic
 
+currentRoom
+  :: M Room
+currentRoom = liftW $ do
+  roomName <- use #playerLocation
+  use (#worldRooms . to (! roomName))
+
 currentCtx
   :: M Ctx
 currentCtx = do
   inventory <- liftW $ use #playerInventory
-  roomName  <- liftW $ use #playerLocation
-  room      <- liftW $ use (#worldRooms . to (! roomName))
+  room <- currentRoom
   pure $ extendCtxWithInventory inventory
        $ extendCtxWithRoom room
        $ emptyCtx
@@ -198,6 +203,7 @@ runCommand
   :: Command -> M ()
 runCommand
   = foldFree (lowerM . hoistCoyoneda runCommandF)
+  . unCommand
 
 runCommandF
   :: CommandF a -> M a
@@ -237,10 +243,16 @@ metaCommands
         for_ metaCommands $ \(MetaCommand {..}) -> do
           liftIO $ putStrLn $ take (column1Width + 2) (metaCommandName ++ repeat ' ')
                            ++ metaCommandHelp
-    , MetaCommand ":browse" "List all the commands you can perform." $ do
+    , MetaCommand ":browse" "List the commands which are available in every room." $ do
         commandNames <- availableCommandNames
         for_ commandNames $ \commandName -> do
           typeName <- liftI $ typeNameOf commandName
+          liftIO $ putStrLn $ commandName ++ " :: " ++ typeName
+    , MetaCommand ":look" "List the room-specific commands and objects." $ do
+        room <- currentRoom
+        let dynamicList = roomToCommandList room ++ roomToObjectList room
+        for_ dynamicList $ \(commandName, dynamic) -> do
+          let typeName = show $ dynTypeRep dynamic
           liftIO $ putStrLn $ commandName ++ " :: " ++ typeName
     , MetaCommand ":inventory" "List the objects you have picked up so far." $ do
         inventory <- liftW $ use #playerInventory

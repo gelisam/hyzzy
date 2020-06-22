@@ -2,20 +2,24 @@ A toy text adventure where commands have Haskell types.
 Type ":help" to view the meta-commands.
 > :help
 :help       List the meta-commands.
-:browse     List all the commands you can perform.
+:browse     List the commands which are available in every room.
+:look       List the room-specific commands and objects.
 :inventory  List the objects you have picked up so far.
 :quit       Abandon the quest (Ctrl-D works too).
 > :browse
 open :: Door -> Command
 unlock :: Key -> Door -> Command
-> :inventory
-key :: Key
+> :look
+look :: Command
+door :: Door
 > look
 You stand in front of the castle's heavy door.
 > open
 open :: Door -> Command
 > open door
 It's locked.
+> :inventory
+key :: Key
 > unlock
 unlock :: Key -> Door -> Command
 > unlock key door

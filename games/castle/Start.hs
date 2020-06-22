@@ -10,7 +10,7 @@ import Objects
 
 intro
   :: Command
-intro = do
+intro = Command $ do
   display "A toy text adventure where commands have Haskell types."
   display "Type \":help\" to view the meta-commands."
 

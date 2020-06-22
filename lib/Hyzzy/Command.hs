@@ -28,10 +28,11 @@ data CommandF r where
   Consume        :: Object fields
                  -> CommandF ()
 
-type Command = Free (Coyoneda CommandF) ()
+newtype Command = Command
+  { unCommand :: Free (Coyoneda CommandF) () }
 
 display
-  :: String -> Command
+  :: String -> Free (Coyoneda CommandF) ()
 display s
   = liftF $ liftCoyoneda
   $ Display s
@@ -41,7 +42,7 @@ addToInventory
   => String
   -> Ctor object fields
   -> fields
-  -> Command
+  -> Free (Coyoneda CommandF) ()
 addToInventory name mkObject fields
   = liftF $ liftCoyoneda
   $ AddToInventory name mkObject fields
@@ -60,7 +61,7 @@ setField
   -> object
   -> Lens' fields field
   -> field
-  -> Command
+  -> Free (Coyoneda CommandF) ()
 setField _ object field value
   = liftF $ liftCoyoneda
   $ SetField (coerce object) field value
@@ -70,10 +71,10 @@ consume
    . Coercible object (Object fields)
   => Ctor object fields
   -> object
-  -> Command
+  -> Free (Coyoneda CommandF) ()
 consume _ object
   = liftF $ liftCoyoneda
   $ Consume (coerce @object @(Object fields) object)
 
 instance IsString Command where
-  fromString = display
+  fromString = Command . display
