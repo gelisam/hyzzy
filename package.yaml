@@ -14,7 +14,6 @@ ghc-options: -W -Wall
 
 dependencies:
   - base
-  - containers
   - free
   - generic-lens
   - kan-extensions
@@ -28,6 +27,7 @@ executables:
     source-dirs: exe
     main: Hyzzy.Main
     dependencies:
+      - containers
       - exceptions
       - filepath
       - haskeline
