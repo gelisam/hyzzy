@@ -13,14 +13,14 @@ function runTest {
   local TESTFILE="$2"
   local EXPECT_SCRIPT="$(cat "$TESTFILE" | \
     sed 's/^\([^>].*\)$/expect {  "\1\\r" {}  timeout { exit 1 }}/g' | \
-    sed 's/^> \(.*\)$/expect {  "> " {}  timeout { exit 1 }}send "\1\\r"/g' | tr '' '\n')"
+    sed 's/^> \(.*\)$/expect {  "> " { set timeout 1 }  timeout { exit 1 }}send "\1\\r"/g' | tr '' '\n')"
 
   #echo "$EXPECT_SCRIPT"
   #echo
 
   ./regenPublicObjects.sh "$GAME"
   stack build hyzzy
-  expect -c 'set timeout 3' \
+  expect -c 'set timeout 5' \
          -c "spawn stack run hyzzy $GAME" \
          -f <(echo "$EXPECT_SCRIPT")
 }
