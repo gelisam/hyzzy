@@ -180,6 +180,9 @@ completionFunc (reversedLhs, _) = do
   names <- execWriterT $ do
     tell $ toListOf (each . #metaCommandName) metaCommands
     tell =<< lift availableCommandNames
+    room <- lift currentRoom
+    tell $ Map.keys $ roomCommands room
+    tell $ Map.keys $ roomObjectNames room
     (tell =<<) $ lift $ liftW
                $ use (#playerInventory . #inventoryNames . to Map.keys)
   completions <- execWriterT $ do
