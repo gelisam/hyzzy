@@ -16,7 +16,7 @@ open door = Command $ do
      | doorOpened -> display "It's already opened."
      | otherwise  -> do
        setField Door door #doorOpened True
-       display "The door opens with a drawn-out yawn. You're in!"
+       display "The door opens with a drawn-out yawn."
 
 unlock :: Key -> Door -> Command
 unlock key door = Command $ do

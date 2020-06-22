@@ -9,6 +9,7 @@ import Data.String
 import Data.Typeable
 
 import Hyzzy.Object
+import Hyzzy.Room
 
 
 
@@ -26,6 +27,8 @@ data CommandF r where
                  -> field
                  -> CommandF ()
   Consume        :: Object fields
+                 -> CommandF ()
+  GoToRoom       :: RoomName
                  -> CommandF ()
 
 newtype Command = Command
@@ -75,6 +78,12 @@ consume
 consume _ object
   = liftF $ liftCoyoneda
   $ Consume (coerce @object @(Object fields) object)
+
+goToRoom
+  :: RoomName -> Free (Coyoneda CommandF) ()
+goToRoom roomName
+  = liftF $ liftCoyoneda
+  $ GoToRoom roomName
 
 instance IsString Command where
   fromString = Command . display

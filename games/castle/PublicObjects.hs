@@ -2,6 +2,6 @@
 
 -- A variant of Objects which only export the type constructors, not the data constructors,
 -- so the player cannot cheat.
-module PublicObjects (Key, Door) where
+module PublicObjects (Key, Door, Treasure) where
 
 import Objects

@@ -10,21 +10,39 @@ Type ":help" to view the meta-commands.
 open :: Door -> Command
 unlock :: Key -> Door -> Command
 > :look
+enter :: Door -> Command
 look :: Command
 door :: Door
 > look
 You stand in front of the castle's heavy door.
-> open
-open :: Door -> Command
+> enter door
+The door is closed.
 > open door
 It's locked.
-> :inventory
-key :: Key
 > unlock
 unlock :: Key -> Door -> Command
+> :inventory
+key :: Key
 > unlock key door
 That random key you happened to carry in your pockets happens to fit the lock. What are the odds?
 > :inventory
+> enter door
+The door is closed.
 > open door
-The door opens with a drawn-out yawn. You're in!
+The door opens with a drawn-out yawn.
+> enter door
+You're in!
+> :look
+exit :: Door -> Command
+look :: Command
+take :: Treasure -> Command
+door :: Door
+treasure :: Treasure
+> look
+The castle's opulence is even more exhuberant than the rumors claimed!
+> take treasure
+Once you sell this at the town, you'll finally be able to buy that adamantium armor you've always wanted.
+> :inventory
+treasure :: Treasure
+> exit door
 > :quit

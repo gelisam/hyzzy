@@ -16,3 +16,5 @@ data DoorFields = DoorFields
   , doorOpened :: Bool
   }
   deriving Generic
+
+newtype Treasure = Treasure (Object ())

@@ -228,6 +228,8 @@ runCommandF = \case
           $ Map.filter (/= objectId)
     liftW $ modifying (#playerInventory . #inventoryItems)
           $ Map.delete objectId
+  GoToRoom roomName -> do
+    liftW $ #playerLocation .= roomName
 
 
 data MetaCommand = MetaCommand

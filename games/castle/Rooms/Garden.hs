@@ -1,4 +1,5 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings, RecordWildCards #-}
+{-# OPTIONS -Wno-name-shadowing #-}
 module Rooms.Garden where
 
 import Hyzzy.Command
@@ -15,3 +16,13 @@ door = Instance Door $ DoorFields
   { doorLocked = True
   , doorOpened = False
   }
+
+enter :: Door -> Command
+enter door = Command $ do
+  DoorFields {..} <- getFields door
+  if doorOpened
+    then do
+      display "You're in!"
+      goToRoom "Castle"
+    else do
+      display "The door is closed."
