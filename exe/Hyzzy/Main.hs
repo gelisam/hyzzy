@@ -25,7 +25,7 @@ import Data.Maybe
 import Data.Proxy
 import Data.Unique
 import GHC.Generics (Generic)
-import Language.Haskell.Interpreter (Interpreter, InterpreterError, InterpreterT, ModuleName)
+import Language.Haskell.Interpreter (OptionVal((:=)), Interpreter, InterpreterError, InterpreterT, ModuleName)
 import System.Console.Haskeline
 import System.Directory
 import System.FilePath
@@ -65,7 +65,10 @@ extendCtx
   -> a
   -> Ctx -> Ctx
 extendCtx termName a ctx = Ctx $ \code -> do
-  a2r <- eval ctx $ printf "\\%s -> %s" termName code
+  a2r <- eval ctx $ printf "\\(%s :: %s) -> %s"
+                           termName
+                           (show $ Typeable.typeOf a)
+                           code
   pure $ a2r a
 
 extendCtxWithDynamic
@@ -537,6 +540,13 @@ play gamePath = do
             pure ()
           Right (Just input) -> do
             roomName <- lift . liftW $ use #playerLocation
+
+            -- so we can use "(x :: Type) -> ...", so we can
+            -- write "open _" to get valid type-hole suggestions
+            lift . liftI $ I.set
+                         [ I.languageExtensions := [I.ScopedTypeVariables]
+                         ]
+
             lift . liftI $ I.setImports
                          $ ["Hyzzy.BridgeTypes", "Commands", "PublicObjects"]
                         ++ [roomModule roomName]
