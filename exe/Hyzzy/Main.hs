@@ -225,6 +225,12 @@ runCommandF = \case
   AddToInventory name ctor fields -> do
     (unique, object) <- liftIO $ newObject ctor fields
 
+    let possibleNames = name
+                      : [name ++ show (n :: Int) | n <- [2..]]
+    usedNames <- liftW $ use (#playerInventory . #inventoryNames . to Map.keys)
+    let remainingNames = possibleNames \\ usedNames
+    let name = head remainingNames
+
     liftW $ modifying (#playerInventory . #inventoryNames)
           $ Map.insert name unique
     liftW $ modifying (#playerInventory . #inventoryItems)
@@ -232,6 +238,12 @@ runCommandF = \case
 
   AddToRoom name ctor fields -> do
     (unique, object) <- liftIO $ newObject ctor fields
+
+    let possibleNames = name
+                      : [name ++ show (n :: Int) | n <- [2..]]
+    usedNames <- liftW $ use (currentRoom . #roomObjectNames . to Map.keys)
+    let remainingNames = possibleNames \\ usedNames
+    let name = head remainingNames
 
     liftW $ modifying (currentRoom . #roomObjectNames)
           $ Map.insert name unique
