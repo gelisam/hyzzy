@@ -11,6 +11,7 @@ open :: Door -> Command
 unlock :: Key -> Door -> Command
 > :look
 enter :: Door -> Command
+leave :: Treasure -> Command
 look :: Command
 door :: Door
 > look
@@ -50,4 +51,6 @@ door :: Door
 > :inventory
 treasure :: Treasure
 > exit door
+> leave treasure
+You leave the castle with a smile on your face, THE END. Type ":quit" to leave the game as well.
 > :quit

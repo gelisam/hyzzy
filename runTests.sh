@@ -12,6 +12,7 @@ function runTest {
   local GAME="$1"
   local TESTFILE="$2"
   local EXPECT_SCRIPT="$(cat "$TESTFILE" | \
+    sed 's/\([\\."]\)/\\\1/g' | \
     sed 's/^\([^>].*\)$/expect {  "\1\\r" {}  timeout { exit 1 }}/g' | \
     sed 's/^> \(.*\)$/expect {  "> " { set timeout 1 }  timeout { exit 1 }}send "\1\\r"/g' | tr '' '\n')"
 

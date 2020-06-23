@@ -26,3 +26,6 @@ enter door = Command $ do
       goToRoom "Castle"
     else do
       display "The door is closed."
+
+leave :: Treasure -> Command
+leave _ = "You leave the castle with a smile on your face, THE END. Type \":quit\" to leave the game as well."
