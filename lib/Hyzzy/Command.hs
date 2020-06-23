@@ -20,6 +20,11 @@ data CommandF r where
                  -> Ctor object fields
                  -> fields
                  -> CommandF ()
+  AddToRoom      :: Typeable object
+                 => String
+                 -> Ctor object fields
+                 -> fields
+                 -> CommandF ()
   GetFields      :: Object fields
                  -> CommandF fields
   SetField       :: Object fields
@@ -46,9 +51,19 @@ addToInventory
   -> Ctor object fields
   -> fields
   -> Free (Coyoneda CommandF) ()
-addToInventory name mkObject fields
+addToInventory name ctor fields
   = liftF $ liftCoyoneda
-  $ AddToInventory name mkObject fields
+  $ AddToInventory name ctor fields
+
+addToRoom
+  :: Typeable object
+  => String
+  -> Ctor object fields
+  -> fields
+  -> Free (Coyoneda CommandF) ()
+addToRoom name ctor fields
+  = liftF $ liftCoyoneda
+  $ AddToRoom name ctor fields
 
 getFields
   :: Coercible object (Object fields)

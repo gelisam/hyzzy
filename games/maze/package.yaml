@@ -1,0 +1,17 @@
+name: maze
+version: 0.1
+synopsis: Another toy text adventure demonstrating hyzzy
+license:             PublicDomain
+author:              Samuel Gélineau
+maintainer:          gelisam+github@gmail.com
+category:            Game
+ghc-options: -W -Wall
+
+dependencies:
+  - base
+  - generic-lens
+  - hyzzy
+  - lens
+
+library:
+  source-dirs: .

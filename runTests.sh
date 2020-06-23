@@ -19,7 +19,7 @@ function runTest {
   #echo "$EXPECT_SCRIPT"
   #echo
 
-  ./regenPublicObjects.sh "$GAME"
+  #./regenPublicObjects.sh "$GAME"
   stack build hyzzy
   expect -c 'set timeout 5' \
          -c "spawn stack run hyzzy $GAME" \

@@ -230,6 +230,14 @@ runCommandF = \case
     liftW $ modifying (#playerInventory . #inventoryItems)
           $ Map.insert unique (toDyn object)
 
+  AddToRoom name ctor fields -> do
+    (unique, object) <- liftIO $ newObject ctor fields
+
+    liftW $ modifying (currentRoom . #roomObjectNames)
+          $ Map.insert name unique
+    liftW $ modifying (currentRoom . #roomObjectInstances)
+          $ Map.insert unique (toDyn object)
+
   GetFields (Object {..}) -> do
     liftIO $ readIORef objectFields
 
