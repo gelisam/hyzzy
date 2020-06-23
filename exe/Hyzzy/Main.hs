@@ -120,16 +120,26 @@ data World = World
   deriving Generic
 
 currentRoom
-  :: M Room
-currentRoom = liftW $ do
-  roomName <- use #playerLocation
-  use (#worldRooms . to (! roomName))
+  :: Lens' World Room
+currentRoom = lens getter setter
+  where
+    getter
+      :: World -> Room
+    getter world
+      = (world ^. #worldRooms) ! (world ^. #playerLocation)
+
+    setter
+      :: World -> Room -> World
+    setter world room
+      = over #worldRooms
+             (Map.insert (world ^. #playerLocation) room)
+             world
 
 currentCtx
   :: M Ctx
 currentCtx = do
   inventory <- liftW $ use #playerInventory
-  room <- currentRoom
+  room <- liftW $ use currentRoom
   pure $ extendCtxWithInventory inventory
        $ extendCtxWithRoom room
        $ emptyCtx
@@ -180,11 +190,9 @@ completionFunc (reversedLhs, _) = do
   names <- execWriterT $ do
     tell $ toListOf (each . #metaCommandName) metaCommands
     tell =<< lift availableCommandNames
-    room <- lift currentRoom
-    tell $ Map.keys $ roomCommands room
-    tell $ Map.keys $ roomObjectNames room
-    (tell =<<) $ lift $ liftW
-               $ use (#playerInventory . #inventoryNames . to Map.keys)
+    (tell =<<) $ lift $ liftW $ Map.keys <$> use (currentRoom . #roomCommands)
+    (tell =<<) $ lift $ liftW $ Map.keys <$> use (currentRoom . #roomObjectNames)
+    (tell =<<) $ lift $ liftW $ Map.keys <$> use (#playerInventory . #inventoryNames)
   completions <- execWriterT $ do
     for_ names $ \name -> do
       when (wordPrefix `isPrefixOf` name) $ do
@@ -254,7 +262,7 @@ metaCommands
           typeName <- liftI $ typeNameOf commandName
           liftIO $ putStrLn $ commandName ++ " :: " ++ typeName
     , MetaCommand ":look" "List the room-specific commands and objects." $ do
-        room <- currentRoom
+        room <- liftW $ use currentRoom
         let dynamicList = roomToCommandList room ++ roomToObjectList room
         for_ dynamicList $ \(commandName, dynamic) -> do
           let typeName = show $ dynTypeRep dynamic
@@ -349,6 +357,7 @@ data Room = Room
   , roomObjectNames     :: Map String Unique
   , roomObjectInstances :: Map Unique Dynamic
   }
+  deriving Generic
 
 instance Semigroup Room where
   Room x1 x2 x3 <> Room y1 y2 y3
