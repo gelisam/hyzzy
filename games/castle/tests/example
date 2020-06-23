@@ -42,6 +42,11 @@ treasure :: Treasure
 The castle's opulence is even more exhuberant than the rumors claimed!
 > take treasure
 Once you sell this at the town, you'll finally be able to buy that adamantium armor you've always wanted.
+> :look
+exit :: Door -> Command
+look :: Command
+take :: Treasure -> Command
+door :: Door
 > :inventory
 treasure :: Treasure
 > exit door

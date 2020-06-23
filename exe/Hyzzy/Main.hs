@@ -221,21 +221,32 @@ runCommandF
 runCommandF = \case
   Display s -> do
     liftIO $ putStrLn s
+
   AddToInventory name ctor fields -> do
     (unique, object) <- liftIO $ newObject ctor fields
+
     liftW $ modifying (#playerInventory . #inventoryNames)
           $ Map.insert name unique
     liftW $ modifying (#playerInventory . #inventoryItems)
           $ Map.insert unique (toDyn object)
+
   GetFields (Object {..}) -> do
     liftIO $ readIORef objectFields
+
   SetField (Object {..}) field value -> do
     liftIO $ modifyIORef objectFields (field .~ value)
+
   Consume (Object {..}) -> do
     liftW $ modifying (#playerInventory . #inventoryNames)
           $ Map.filter (/= objectId)
     liftW $ modifying (#playerInventory . #inventoryItems)
           $ Map.delete objectId
+
+    liftW $ modifying (currentRoom . #roomObjectNames)
+          $ Map.filter (/= objectId)
+    liftW $ modifying (currentRoom . #roomObjectInstances)
+          $ Map.delete objectId
+
   GoToRoom roomName -> do
     liftW $ #playerLocation .= roomName
 
